@@ -8,8 +8,9 @@ import os
 from subprocess import Popen
 from tempfile import mkstemp
 
-import six
 from bs4 import BeautifulSoup, NavigableString
+import six
+
 
 __version__ = '1.4.1'
 

@@ -1,11 +1,13 @@
 import os
 import platform
-import subprocess
 import re
-import psutil
 from subprocess import PIPE
-# from __main__ import name
+import subprocess
 
+import psutil
+
+
+# from __main__ import name
 def get_processor():
     if platform.system() == "Windows":
         return platform.processor()

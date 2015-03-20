@@ -3,13 +3,15 @@ Created on 24 Feb 2015
 
 @author: oche
 '''
-import vEQ_benchmark.database.vEQ_database as DB
-import vEQ_benchmark.videoInput.vlc_localplayback as vlc
-import vEQ_benchmark.processmonitor.processMonitor as procmon
-import sys
 import os
+import sys
 import time
+
+import database.vEQ_database as DB
+import vEQ_benchmark.processmonitor.processMonitor as procmon
 from vEQ_benchmark.pymediainfo import MediaInfo
+import vEQ_benchmark.videoInput.vlc_localplayback as vlc
+
 
 if __name__ == '__main__':
     vEQdb = DB.vEQ_database()

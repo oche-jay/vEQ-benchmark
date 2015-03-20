@@ -4,10 +4,12 @@ Created on 13 Feb 2015
 @author: oche
 '''
 
-from PyQt4 import QtCore
 import time
-import vlc, sys, os, psutil
+
+from PyQt4 import QtCore
 import vEQ_benchmark.database.vEQ_database as vEQdb
+import vlc, sys, os, psutil
+
 
 class VLCLocalPlayback:
     '''

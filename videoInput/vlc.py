@@ -41,13 +41,13 @@ C{get_instance} method of L{MediaPlayer} and L{MediaListPlayer}.
 
 import ctypes
 from ctypes.util import find_library
+import functools
+from inspect import getargspec
 import os
 import sys
-import functools
+
 
 # Used by EventManager in override.py
-from inspect import getargspec
-
 __version__ = "N/A"
 build_date  = "Wed Feb  4 16:43:32 2015"
 

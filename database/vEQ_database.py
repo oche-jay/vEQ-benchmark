@@ -3,8 +3,10 @@ Created on 24 Feb 2015
 
 @author: oche
 '''
-import sqlite3 as lite
 import sys
+
+import sqlite3 as lite
+
 
 class vEQ_database(object):
     '''
