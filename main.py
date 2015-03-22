@@ -7,14 +7,16 @@ import os
 import sys
 import time
 
+from pymediainfo import MediaInfo
+
 import database.vEQ_database as DB
 import processmonitor.processMonitor as procmon
-from pymediainfo import MediaInfo
 import videoInput.vlc_localplayback as vlc
 
 
 if __name__ == '__main__':
     vEQdb = DB.vEQ_database()
+    vEQdb.initDB()
     timestamp = time.time()
 
     proc = procmon.get_processor()
@@ -33,16 +35,26 @@ if __name__ == '__main__':
             print('Error: %s file not readable' % movie)
             sys.exit(1)
             
-        movie_info = MediaInfo.parse(movie)
-        movie_data = movie_info.to_json()
-        
+            
+#         we might be able to gety some of this info form vlc herself although mediainfo tends to have much more info
+        try:    
+            movie_info = MediaInfo.parse(movie)
+            movie_data = movie_info.to_json()
+            for track in movie_info.tracks:
+                if track.track_type == 'Video':
+                    movie_codec = track.codec
+                    movie_height = track.height
+                    movie_width = track.width
+        except:
+             error = sys.exc_info()
+             print "Unexpected error:", error
+             movie_data = str(error)
+             movie_codec, movie_height, movie_width = "Null",0,0
+                   
+       
         print movie_data
         
-        for track in movie_info.tracks:
-            if track.track_type == 'Video':
-                movie_codec = track.codec
-                movie_height = track.height
-                movie_width = track.width
+        
         
 #         write info to videoinfo database
         """

@@ -118,11 +118,12 @@ def find_lib():
                     import _winreg as w
                 for r in w.HKEY_LOCAL_MACHINE, w.HKEY_CURRENT_USER:
                     try:
-                        r = w.OpenKey(r, 'Software\\VideoLAN\\VLC')
+                        r = w.OpenKey(r, 'Software\\VideoLAN\\VLC') #may fail if 32 bit vlc used on 64 bit machine 
                         plugin_path, _ = w.QueryValueEx(r, 'InstallDir')
                         w.CloseKey(r)
                         break
-                    except w.error:
+                    except w.error as err:
+                        print err
                         pass
             except ImportError:  # no PyWin32
                 pass
@@ -6710,22 +6711,13 @@ if __name__ == '__main__':
 
         def getch():  # getchar(), getc(stdin)  #PYCHOK flake
                 fd = sys.stdin.fileno()
-            
-#             if sys.stdin.isatty():
-                print "IS A TTY"
                 old = termios.tcgetattr(fd)
                 try:
                     tty.setraw(fd)
                     ch = sys.stdin.read(1)
                 finally:
                     termios.tcsetattr(fd, termios.TCSADRAIN, old)
-                return ch
-#             else:
-#                 print 'Using readline'
-#                 ch = sys.stdin.read(1).rstrip()
-#                 return ch
-#      
-            
+                return ch      
 
     def end_callback(event):
         print('End of media stream (event %s)' % event.type)
@@ -6771,24 +6763,29 @@ if __name__ == '__main__':
         player.set_media(media)
         
         
-        if sys.platform == "darwin":
-            from PyQt4 import QtCore
-            from PyQt4 import QtGui
-            import sys
+#         if sys.platform == "darwin":
+        from PyQt4 import QtCore
+        from PyQt4 import QtGui
+        import sys
 
-#             player = setup_player('cardio.mkv')
+        vlcApp =QtGui.QApplication(sys.argv)
+        vlcWidget = QtGui.QFrame()
 
-            vlcApp =QtGui.QApplication(sys.argv)
-            vlcWidget = QtGui.QFrame()
-#             vlcWidget.resize(700,700)
-            vlcWidget.show()
-            vlcWidget.raise_()
-            
+        vlcWidget.show()
+        vlcWidget.raise_()
+
+        if sys.platform == "win32":
+            player.set_hwnd(vlcWidget.winId())
+        elif sys.platform == "darwin":
+            # We have to use 'set_nsobject' since Qt4 on OSX uses Cocoa
+            # framework and not the old Carbon.
             player.set_nsobject(vlcWidget.winId())
-            
+#             display.vlcMediaPlayer.set_nsobject(win_id)
+        else:
+            # for Linux using the X Server
+            player.set_xwindow(vlcWidget.winId())
+            has_own_widget = True
          
-            
-            
         player.play()
         
         # Some marquee examples.  Marquee requires '--sub-source marq' in the
@@ -6813,7 +6810,11 @@ if __name__ == '__main__':
         event_manager = player.event_manager()
         event_manager.event_attach(EventType.MediaPlayerEndReached,      end_callback)
         event_manager.event_attach(EventType.MediaPlayerPositionChanged, pos_callback, player)
+        
+        
+            
         vlcApp.exec_()
+        
         def mspf():
             """Milliseconds per frame."""
             return int(1000 // (player.get_fps() or 25))
@@ -6885,6 +6886,16 @@ if __name__ == '__main__':
 
         print('Press q to quit, ? to get help.%s' % os.linesep)
         
+        while True:
+            pass
+#             k = getch()
+#             print('> %s' % k)
+#             if k in keybindings:
+#                 keybindings[k]()
+#             elif k.isdigit():
+#                  # jump to fraction of the movie.
+#                 player.set_position(float('0.'+k))
+
     else:
         print('Usage: %s <movie_filename>' % sys.argv[0])
         print('Once launched, type ? for help.')

@@ -6,9 +6,11 @@ Created on 13 Feb 2015
 
 import time
 
-from PyQt4 import QtCore
-import vEQ_benchmark.database.vEQ_database as vEQdb
+import database.vEQ_database as vEQdb
 import vlc, sys, os, psutil
+ #Might work on Linux and Windows
+from PyQt4 import QtCore
+from PyQt4 import QtGui
 
 
 class VLCLocalPlayback:
@@ -46,21 +48,32 @@ class VLCLocalPlayback:
         player.set_media(media)
         return player    
     
-    def setupDarwinPlayback(self,player):
+    def setupPlayback(self,player):
         '''
          VLC playback on a Darwin Machine (MAC OS X) 
         '''
-        #Might work on Linux and Windows
-        from PyQt4 import QtCore
-        from PyQt4 import QtGui
         
         vlcApp = QtGui.QApplication(sys.argv)
         vlcWidget = QtGui.QFrame()  
         vlcWidget.setWindowTitle("vEQ_benchmark")  
         vlcWidget.show()
         vlcWidget.raise_()
-            
-        player.set_nsobject(vlcWidget.winId())
+        
+        if sys.platform == "win32":
+            player.set_hwnd(vlcWidget.winId())
+        elif sys.platform == "darwin":
+            # We have to use 'set_nsobject' since Qt4 on OSX uses Cocoa
+            # framework and not the old Carbon.
+            player.set_nsobject(vlcWidget.winId())
+#             display.vlcMediaPlayer.set_nsobject(win_id)
+        else:
+            # for Linux using the X Server
+            player.set_xwindow(vlcWidget.winId())
+            self.has_own_widget = True
+         
+        player.play()
+        
+        
         player.play() 
         
     #   Shift the communication with the UI to another QThread
@@ -96,16 +109,11 @@ class VLCLocalPlayback:
            print('Error: %s' % sys.exc_info()[1])
            
     def play(self):
-            #         self.finished.emit()
-         if sys.platform == "darwin":  
-           self.setupDarwinPlayback(self.player)
-         elif sys.platform == "windows":
-            pass
-         elif sys.platform == "linux":
-            pass
+           self.setupPlayback(self.player)
+     
 
 
-    # Subclassing QObject and using moveToThread
+    # Subclassin   g QObject and using moveToThread
     # http://blog.qt.digia.com/blog/2007/07/05/qthreads-no-longer-abstract
     class QThreadforMainLoop(QtCore.QObject):
              

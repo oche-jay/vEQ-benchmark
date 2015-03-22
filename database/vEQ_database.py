@@ -38,7 +38,7 @@ class vEQ_database(object):
             if self.db:
                 self.db.close
                 
-    def getDB():
+    def getDB(self):
         return self.db
     
     def clearDB(self):
@@ -118,7 +118,7 @@ if __name__ == '__main__':
     vEQdb = vEQ_database()
 #     vEQdb.clearDB()
     vEQdb.initDB()
-    import vEQ_benchmark.processmonitor.processMonitor as procMon
+    import processmonitor.processMonitor as procMon
     import time
     timestamp = time.time()
     proc = procMon.get_processor()
