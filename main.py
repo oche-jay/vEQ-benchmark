@@ -30,7 +30,6 @@ if __name__ == '__main__':
     if sys.argv[1:] and sys.argv[1] not in ('-h', '--help'):
 #         write to vid info db
         movie = os.path.expanduser(sys.argv[1])
-        print movie
         if not os.access(movie, os.R_OK):
             print('Error: %s file not readable' % movie)
             sys.exit(1)
@@ -50,13 +49,8 @@ if __name__ == '__main__':
              print "Unexpected error:", error
              movie_data = str(error)
              movie_codec, movie_height, movie_width = "Null",0,0
-                   
-       
-        print movie_data
-        
-        
-        
-#         write info to videoinfo database
+
+#       Write info to videoinfo database
         """
          video =values = [timestamp INT, name TEXT, specs TEXT, codec TEXT, width TEXT, height TEXT
         """

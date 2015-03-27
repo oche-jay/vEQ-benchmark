@@ -18,6 +18,7 @@ class VLCLocalPlayback:
     Class encapsulating the playback of a video using the VLC Media Player
     '''
     vlcProcess =  psutil.Process()
+    qthread = None
        
     def __init__(self,movie,db):
         """
@@ -46,18 +47,19 @@ class VLCLocalPlayback:
        
         player = instance.media_player_new()
         player.set_media(media)
+        
+        print 'Player Created'
         return player    
     
     def setupPlayback(self,player):
         '''
          VLC playback on a Darwin Machine (MAC OS X) 
         '''
-        
         vlcApp = QtGui.QApplication(sys.argv)
         vlcWidget = QtGui.QFrame()  
         vlcWidget.setWindowTitle("vEQ_benchmark")  
         vlcWidget.show()
-        vlcWidget.raise_()
+#         vlcWidget.raise_()
         
         if sys.platform == "win32":
             player.set_hwnd(vlcWidget.winId())
@@ -72,24 +74,31 @@ class VLCLocalPlayback:
             self.has_own_widget = True
          
         player.play()
-        
-        
-        player.play() 
-        
-    #   Shift the communication with the UI to another QThread
-        objThread = QtCore.QThread()
-        obj = self.QThreadforMainLoop(self,self.db)
-        obj.moveToThread(objThread)
-        obj.finished.connect(objThread.quit)
-        objThread.started.connect(obj.longRunning)
 
-    #   this gets called when when the finished signal is emmited by thread or somethingf
-        objThread.finished.connect(vlcApp.exit)
-        objThread.start()
         
-        sys.exit(vlcApp.exec_())
-        
+    #   Shift the communication with the UI to another QThread called obJThread
+        self.qThread = QtCore.QThread()
+        qobjectformainloop = self.QObjectThreadforMainLoop(self,self.db) #create the thread handler thing and move it to the new qhtread created
+        qobjectformainloop.moveToThread(self.qThread)
        
+#       register that when qobjectformainloop finished signal is emitted call qthread.quit i.e qthrad.quit is the slot for the 'finsighed' signal
+        qobjectformainloop.finished.connect(self.qThread.quit)
+       
+#         register that whenever qthread's started signal is emmitted, call qobjectformainlop longrunning method slot'
+        self.qThread.started.connect(qobjectformainloop.longRunning)
+    #   this gets called when when the finished signal is emmited by thread or somethingf
+#         self.qThread.finished.connect(vlcApp.exit)
+        
+        self.qThread.start()
+        
+#         loop to play video bck ?
+        self.cleanExit(vlcApp.exec_())
+        
+    
+    def cleanExit(self,int): 
+        self.qThread.exit(0)
+        sys.exit(int)   
+        
     def print_info(self,player):
        """Print information about the media"""
        try:
@@ -113,25 +122,39 @@ class VLCLocalPlayback:
      
 
 
-    # Subclassin   g QObject and using moveToThread
+    # Subclassing QObject and using moveToThread
     # http://blog.qt.digia.com/blog/2007/07/05/qthreads-no-longer-abstract
-    class QThreadforMainLoop(QtCore.QObject):
+    # http://stackoverflow.com/questions/6783194/background-thread-with-qthread-in-pyqt
+    class QObjectThreadforMainLoop(QtCore.QObject):
              
+        finished = QtCore.pyqtSignal()
+                
         def __init__(self,a_playback_obj,db):
-            super(VLCLocalPlayback.QThreadforMainLoop, self).__init__()
+            super(VLCLocalPlayback.QObjectThreadforMainLoop, self).__init__()
             self.vlc_playback_object = a_playback_obj
             self.db = db
-            print self.vlc_playback_object
-                  
-        finished = QtCore.pyqtSignal()
     
-    # Loop that can send messages to the player resides here!
+        '''
+        This method is the "longrunning" thread that handles data collection  for the videeo playback process in a seperate thread
+        '''
         def longRunning(self):
             count = 0
             vlcProcess = self.vlc_playback_object.vlcProcess
-            vlcProcess.cpu_percent(interval=1)
+#             vlcProcess.cpu_percent(interval=1)
+            
+            sys_index_FK = self.db.sysinfo_index
+            video_index_FK = self.db.videoinfo_index
+                
+            cpu_val = vlcProcess.cpu_percent()
+            mempercent_val = vlcProcess.memory_percent()
+            marq_str = str.format("CPU: %3.1f%%%%\nMEM: %3.1f%%%%\n" % (cpu_val,mempercent_val)) #need to escape %% twice
+            
+            player = self.vlc_playback_object.player
+            player.video_set_marquee_int(vlc.VideoMarqueeOption.Enable, 1)
+            player.video_set_marquee_int(vlc.VideoMarqueeOption.Size, 50)  # pixels
+            player.video_set_marquee_int(vlc.VideoMarqueeOption.Position, vlc.Position.TopRight)
+            
             while True:
-                time.sleep(1) #MAGIC number,,replace with POLLING_TINETVAL or something
                 count += 1
 #               perhaps move this to the process monitor class or nah?
                 timestamp = time.time()
@@ -143,39 +166,38 @@ class VLCLocalPlayback:
                 power_val = 55 #procmon.getSystemPower() or something
                 rss =  mem_val.rss
                 
-                cpu_valString = str.format("CPU: %3.1f%%%%\n" % cpu_val)
-                mem_valString = str.format("MEM: %3.1f%%%%\n" % mempercent_val)
-                net_valString = str.format("MEM: %3.1f%%%%\n" % net_recv_val)
-                power_valString = str.format("POWER: %3.1f%%%%W\n" % power_val)
-                sys_index_FK = self.db.sysinfo_index
-                video_index_FK = self.db.videoinfo_index
-                print sys_index_FK, video_index_FK
+#                 cpu_valString = str.format("CPU: %3.1f%%%%\n" % cpu_val)
+#                 mem_valString = str.format("MEM: %3.1f%%%%\n" % mempercent_val)
+#                 net_valString = str.format("MEM: %3.1f%%%%\n" % net_recv_val)
+#                 power_valString = str.format("POWER: %3.1f%%%%W\n" % power_val)              
+#                 print sys_index_FK, video_index_FK
                                 
                 powval = "55 W"
                 marq_str = str.format("CPU: %3.1f%%%%\nMEM: %3.1f%%%%\n" % (cpu_val,mempercent_val)) #need to escape %% twice
-                
-                print self.db
+                player.video_set_marquee_string(vlc.VideoMarqueeOption.Text, marq_str)
+#                 print self.db
                 print marq_str,
                 print vlcProcess.connections(kind='inet')
-                print mem_val.rss
+#                 print mem_val.rss
                 print mem_val
-                print psutil.net_io_counters().bytes_sent
+#                 print psutil.net_io_counters().bytes_sent
                 print psutil.net_io_counters()
                 
                 values = [timestamp, power_val, cpu_val, mempercent_val, rss, sys_index_FK, video_index_FK]
                 self.db.insertIntoReadingsTable(values)
                 
-                
-                
                 if sys.platform != 'darwin': # Availability: all platforms except OSX
                     print vlcProcess.io_counters()
-                
-                player = self.vlc_playback_object.player
-                player.video_set_marquee_int(vlc.VideoMarqueeOption.Enable, 1)
-                player.video_set_marquee_int(vlc.VideoMarqueeOption.Size, 24)  # pixels
-                player.video_set_marquee_int(vlc.VideoMarqueeOption.Position, vlc.Position.TopRight)
-                player.video_set_marquee_string(vlc.VideoMarqueeOption.Text, marq_str)
+                    
+                time.sleep(1) 
+    
 #                     print_info(self.player)   
+            def emitFinsished():
+                print "Object Finisiing"
+                self.finished.emit()
+
+
+
 if __name__ == '__main__':
     if sys.argv[1:] and sys.argv[1] not in ('-h', '--help'):
         movie = os.path.expanduser(sys.argv[1])

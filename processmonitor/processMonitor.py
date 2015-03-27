@@ -10,7 +10,9 @@ import psutil
 # from __main__ import name
 def get_processor():
     if platform.system() == "Windows":
-        return platform.processor()
+        family = platform.processor()
+        name = subprocess.check_output(["wmic","cpu","get", "name"]).strip().split("\n")[1]
+        return ' '.join([name, family])
     elif platform.system() == "Darwin":
         import os
         os.environ["PATH"] = os.environ["PATH"] + os.pathsep + "/usr/sbin"
@@ -21,13 +23,13 @@ def get_processor():
         for line in all_info.split("\n"):
             if "model name" in line:
                 return re.sub( ".*model name.*:", "", line,1)
-    return ""
+    return "N/A"
 
 def get_gpu():
+    import os
     if platform.system() == "Windows":
-        return "Not Implemented"
+        return subprocess.check_output(["wmic","path",  "win32_VideoController", "get", "name"]).strip().split("\n")[1]
     elif platform.system() == "Darwin":
-        import os
         os.environ["PATH"] = os.environ["PATH"] + os.pathsep + "/usr/sbin"
         return subprocess.check_output(["system_profiler","SPDisplaysDataType"]).strip()
     elif platform.system() == "Linux":
@@ -38,9 +40,8 @@ def get_gpu():
 def get_os():
     system = platform.system()
     release = platform.release()
-    platform
-    os = ' '.join([system, release])
-    return os
+    operatingsys = ' '.join([system, release])
+    return operatingsys
 #p = psutil.Popen(["stress","-t","10","-c","1"], stdout=PIPE)
 
 # for proc in psutil.process_iter():
@@ -54,7 +55,10 @@ def get_os():
 #         print(pinfo)
 
 if __name__ == '__main__':
+    import time
+    t = time.time()
     print platform.system()
     print get_processor()
     print get_os()
     print get_gpu()
+    print time.time() - t

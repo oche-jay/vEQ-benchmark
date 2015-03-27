@@ -15,7 +15,7 @@ import six
 __version__ = '1.4.1'
 
 ENV_DICT = os.environ
-PATH_TO_MEDIAINFO = "/usr/local/bin" #Put this in a seperate PREFS class or something
+PATH_TO_MEDIAINFO = "C:/MediaInfo" #Put this in a seperate PREFS class or something
 
 
 class Track(object):
@@ -95,7 +95,6 @@ class MediaInfo(object):
         fp_err = os.fdopen(fileno_err, 'r+b')
         
         environment["PATH"] = PATH_TO_MEDIAINFO +  os.pathsep + ENV_DICT["PATH"]
-        print environment["PATH"]
         
         p = Popen(command, stdout=fp_out, stderr=fp_err, env=environment)
         p.wait()
@@ -130,14 +129,18 @@ class MediaInfo(object):
 
     def to_json(self):
         return json.dumps(self.to_data())
-         
-filename = "cardio.mkv"
-command = ["mediainfo", "-f", "--Output=XML", filename]
-fileno_out, fname_out = mkstemp(suffix=".xml", prefix="media-")
-fileno_err, fname_err = mkstemp(suffix=".err", prefix="media-")
-fp_out = os.fdopen(fileno_out, 'r+b')
-fp_err = os.fdopen(fileno_err, 'r+b')
-# p = Popen(command, shell=True)
+        
+if __name__ == '__main__':
+    print os.environ["PATH"]   
+    ENV_DICT["PATH"] = PATH_TO_MEDIAINFO +  os.pathsep + ENV_DICT["PATH"]    
+    print os.environ["PATH"]   
+    filename = "cardio.mkv"
+    command = ["mediainfo", "-f", "--Output=XML", filename]
+    fileno_out, fname_out = mkstemp(suffix=".xml", prefix="media-")
+    fileno_err, fname_err = mkstemp(suffix=".err", prefix="media-")
+    fp_out = os.fdopen(fileno_out, 'r+b')
+    fp_err = os.fdopen(fileno_err, 'r+b')
+    p = Popen(command, shell=True)
 # p.wait
 
 
