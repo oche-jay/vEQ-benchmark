@@ -1,3 +1,6 @@
 pyqt4
 pymediainfo
 psutil
+#if using Voltcraft Powermeter
+cython 
+hidapi

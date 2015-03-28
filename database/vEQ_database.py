@@ -13,13 +13,31 @@ class vEQ_database(object):
     Creates or opens an sqlite database for data to be written to
     '''
     
-    SYS_INFO_COLS = "id INTEGER PRIMARY KEY, timestamp REAL, name TEXT, specs TEXT"
-    VIDEO_INFO_COLS = "id INTEGER PRIMARY KEY, timestamp REAL, name TEXT, specs TEXT, codec TEXT, width TEXT, height TEXT"
-    READINGS_COLS = ("id INTEGER PRIMARY KEY, timestamp REAL, power REAL, "
-                    "cpu_percent REAL, mem_percent REAL, resident_set_size INTEGER, "
-                    "sys_info_FK INTEGER, video_info_FK INTEGER, "
-                    "FOREIGN KEY (sys_info_FK) REFERENCES sys_info(id), "
-                    "FOREIGN KEY (video_info_FK) REFERENCES video_info(id)" )
+    SYS_INFO_COLS = ("id INTEGER PRIMARY KEY, "
+                     "timestamp REAL, "
+                     "name TEXT, "
+                     "cpu TEXT, "
+                     "gpu TEXT, "
+                     "specs TEXT ")
+    
+    VIDEO_INFO_COLS =  ("id INTEGER PRIMARY KEY,"
+                        "timestamp REAL, " 
+                        "name TEXT, "
+                        "specs TEXT, "
+                        "codec TEXT, "
+                        "width TEXT, "
+                        " height TEXT")
+                    
+    READINGS_COLS = ("id INTEGER PRIMARY KEY,"
+                     "timestamp REAL,"
+                     "power REAL, "
+                     "cpu_percent REAL, "
+                     "mem_percent REAL, "
+                     "resident_set_size INTEGER, "
+                     "sys_info_FK INTEGER, "
+                     "video_info_FK INTEGER, "
+                     "FOREIGN KEY (sys_info_FK) REFERENCES sys_info(id), "
+                     "FOREIGN KEY (video_info_FK) REFERENCES video_info(id)" )
     
 
     def __init__(self): #consider overriding this to input a filepath  for the DB to be stored, if possible
@@ -85,13 +103,13 @@ class vEQ_database(object):
         Insert given values into sysinfo table
         params:
         values: a list of values for the sys info table
-                id INT PRIMARY KEY, name TEXT, specs TEXT, timestamp INT"
+                id INT PRIMARY KEY, timestamp INT, name TEXT, specs TEXT, cpu TEXT, gpu TEXT"
         returns: the last index of the sysinfo table
         '''
         with self.db:
             cursor = self.db.cursor()  
             #           id INT PRIMARY KEY, name TEXT, specs TEXT, timestamp INT,
-            cursor.execute("INSERT INTO sys_info VALUES (null,?,?,?);", values)
+            cursor.execute("INSERT INTO sys_info VALUES (null,?,?,?,?,?);", values)
 #             global sysinfo_index
             self.sysinfo_index = cursor.lastrowid
             print self.sysinfo_index

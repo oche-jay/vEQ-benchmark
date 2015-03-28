@@ -16,13 +16,16 @@ import videoInput.vlc_localplayback as vlc
 
 if __name__ == '__main__':
     vEQdb = DB.vEQ_database()
+#     vEQdb.clearDB()
     vEQdb.initDB()
     timestamp = time.time()
 
-    proc = procmon.get_processor()
+    cpu = procmon.get_processor()
     os_info = procmon.get_os()
-
-    values = [timestamp,os_info,proc]
+    gpu = procmon.get_gpu()
+    specs =procmon.get_specs()
+    
+    values = [timestamp,os_info,cpu,gpu,specs]
     
 #     write system information to database
     vEQdb.insertIntoSysInfoTable(values)
