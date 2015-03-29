@@ -24,8 +24,11 @@ if __name__ == '__main__':
 #         // Send a Feature Report to the device
        
         bps = BAUD_SPEED
-        buf = [0x0, 255, bps>>8, bps>>16, bps>>24, 0x03]
+                          
+        buf = [0x0, 128, bps>>8, bps>>16, bps>>24, 0x03]
         print buf
+        buff = ''.join(map(chr, buf))
+        print buff
         res = hid.send_feature_report(buf);
         print res 
         
@@ -39,13 +42,15 @@ if __name__ == '__main__':
             if (res < 0):
                 sys.stderr.write("Unable to read()")
             time.sleep(1)
+            
             # format data 
-    #         int len=buf[0] & 7; // the first byte contains the length in the lower 3 bits ( 111 = 7 )
-    #         for (i=0; i<len; i++)
-    #             buf[i+1] &= 0x7f; // bitwise and with 0111 1111, mask the upper bit which is always 1
-    # 
+            len = res[0] & 7; # the first byte contains the length in the lower 3 bits ( 111 = 7 )
+            print len
+            for i in xrange(0,len):
+                res[i+1] &= 0x7f # bitwise and with 0111 1111, mask the upper bit which is always 1
+                print res[i+1]
     #         if(len>0)
-    #         {
+    #         {  
     #             fwrite(buf+1, 1, len, stdout); // write data directly to stdout to enable pipeing to interpreter app
     #             fflush(stdout);
     #         }
