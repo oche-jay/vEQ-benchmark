@@ -11,34 +11,41 @@ import vlc, sys, os, psutil
  #Might work on Linux and Windows
 from PyQt4 import QtCore
 from PyQt4 import QtGui
+import powermonitor
 
 
-class VLCLocalPlayback:
+class VEQPlayback:
     '''
     Class encapsulating the playback of a video using the VLC Media Player
     '''
     vlcProcess =  psutil.Process()
     qthread = None
        
-    def __init__(self,movie,db):
+    def __init__(self,movie,db,args,meter):
         """
         Params
         movie: the movie to playback
         db: the sqlite db that stats will be written to
+        args: args to startup vlc
+        meter: a source for power readings - eg killawatt meter, voltcraft meter, acpi, smc, etc etc
         """
-        self.player = self.getPlayer(movie) 
+        self.player = self.getPlayer(movie,args) 
         self.db = db
+        self.meter = meter
          
-    def getPlayer(self,movie):
+    def getPlayer(self,movie,args):
         '''
          Setup and return a VLC Player 
-         @param video: A string location for the movie or video to be played 
+         @param video: URL or File location for the movie or video to be played 
         '''
-        print 'Creating Player'
-        instance = vlc.Instance("--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq --verbose -1 ")
-          
+#         print 'Creating Player'
+        instance = vlc.Instance(args)
+        
+#       Need to create a MediaListPlayer and add videos to the playlist. This 
+#       is the only way to play back Youtube.
         try:
-            media = instance.media_new(movie)
+            media = instance.media_new(movie) 
+            media_list = instance.media_list_new([movie]) #a list of one movie
         except NameError:
             print('NameError: %s (%s vs LibVLC %s)' % (sys.exc_info()[1],
                                                        vlc.__version__,
@@ -48,12 +55,15 @@ class VLCLocalPlayback:
         player = instance.media_player_new()
         player.set_media(media)
         
-        print 'Player Created'
+        list_player =  instance.media_list_player_new()
+        list_player.set_media_player(player)
+        list_player.set_media_list(media_list)
+    
         return player    
     
     def setupPlayback(self,player):
         '''
-         VLC playback on a Darwin Machine (MAC OS X) 
+        
         '''
         vlcApp = QtGui.QApplication(sys.argv)
         vlcWidget = QtGui.QFrame()  
@@ -78,17 +88,17 @@ class VLCLocalPlayback:
         
     #   Shift the communication with the UI to another QThread called obJThread
         self.qThread = QtCore.QThread()
-        qobjectformainloop = self.QObjectThreadforMainLoop(self,self.db) #create the thread handler thing and move it to the new qhtread created
+        qobjectformainloop = self.QObjectThreadforMainLoop(self,self.db,self.meter) #create the thread handler thing and move it to the new qhtread created
         qobjectformainloop.moveToThread(self.qThread)
-       
+        
 #       register that when qobjectformainloop finished signal is emitted call qthread.quit i.e qthrad.quit is the slot for the 'finsighed' signal
         qobjectformainloop.finished.connect(self.qThread.quit)
-       
+        
 #         register that whenever qthread's started signal is emmitted, call qobjectformainlop longrunning method slot'
         self.qThread.started.connect(qobjectformainloop.longRunning)
     #   this gets called when when the finished signal is emmited by thread or somethingf
 #         self.qThread.finished.connect(vlcApp.exit)
-        
+         
         self.qThread.start()
         
 #         loop to play video bck ?
@@ -129,10 +139,11 @@ class VLCLocalPlayback:
              
         finished = QtCore.pyqtSignal()
                 
-        def __init__(self,a_playback_obj,db):
-            super(VLCLocalPlayback.QObjectThreadforMainLoop, self).__init__()
+        def __init__(self,a_playback_obj,db,meter):
+            super(VEQPlayback.QObjectThreadforMainLoop, self).__init__()
             self.vlc_playback_object = a_playback_obj
             self.db = db
+            self.meter = meter
     
         '''
         This method is the "longrunning" thread that handles data collection  for the videeo playback process in a seperate thread
@@ -163,7 +174,9 @@ class VLCLocalPlayback:
                 mem_val = vlcProcess.memory_info()
                 net_sent_val = psutil.net_io_counters().bytes_sent
                 net_recv_val = psutil.net_io_counters().bytes_recv
-                power_val = 55 #procmon.getSystemPower() or something
+                
+                power_val = float(self.meter.get_device_reading())
+              
                 rss =  mem_val.rss
                 
 #                 cpu_valString = str.format("CPU: %3.1f%%%%\n" % cpu_val)
@@ -172,23 +185,23 @@ class VLCLocalPlayback:
 #                 power_valString = str.format("POWER: %3.1f%%%%W\n" % power_val)              
 #                 print sys_index_FK, video_index_FK
                                 
-                powval = "55 W"
-                marq_str = str.format("CPU: %3.1f%%%%\nMEM: %3.1f%%%%\n" % (cpu_val,mempercent_val)) #need to escape %% twice
+              
+                marq_str = str.format("CPU: %3.1f%%%%\nMEM: %3.1f%%%%\nPOWR: %3.1fW\n" % (cpu_val,mempercent_val,power_val)) #need to escape %% twice
                 player.video_set_marquee_string(vlc.VideoMarqueeOption.Text, marq_str)
-#                 print self.db
-                print marq_str,
-                print vlcProcess.connections(kind='inet')
-#                 print mem_val.rss
-                print mem_val
-#                 print psutil.net_io_counters().bytes_sent
-                print psutil.net_io_counters()
+# #                 print self.db
+#                 print marq_str
+#                 print vlcProcess.connections(kind='inet')
+# #                 print mem_val.rss
+#                 print mem_val
+# #                 print psutil.net_io_counters().bytes_sent
+#                 print psutil.net_io_counters()
                 
-                values = [timestamp, power_val, cpu_val, mempercent_val, rss, sys_index_FK, video_index_FK]
+                values = [timestamp, cpu_val, mempercent_val, rss, sys_index_FK, video_index_FK]
                 self.db.insertIntoReadingsTable(values)
-                
-                if sys.platform != 'darwin': # Availability: all platforms except OSX
-                    print vlcProcess.io_counters()
-                    
+#                 
+#                 if sys.platform != 'darwin': # Availability: all platforms except OSX
+#                     print vlcProcess.io_counters()
+#                     
                 time.sleep(1) 
     
 #                     print_info(self.player)   
@@ -204,7 +217,7 @@ if __name__ == '__main__':
         if not os.access(movie, os.R_OK):
             print('Error: %s file not readable' % movie)
             sys.exit(1)
-        vlcPlayback = VLCLocalPlayback(movie)
+        vlcPlayback = VEQPlayback(movie)
         vlcPlayback.play()
 
         

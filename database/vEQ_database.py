@@ -28,9 +28,8 @@ class vEQ_database(object):
                         "width TEXT, "
                         " height TEXT")
                     
-    READINGS_COLS = ("id INTEGER PRIMARY KEY,"
+    PS_READINGS_COLS = ("id INTEGER PRIMARY KEY,"
                      "timestamp REAL,"
-                     "power REAL, "
                      "cpu_percent REAL, "
                      "mem_percent REAL, "
                      "resident_set_size INTEGER, "
@@ -38,6 +37,10 @@ class vEQ_database(object):
                      "video_info_FK INTEGER, "
                      "FOREIGN KEY (sys_info_FK) REFERENCES sys_info(id), "
                      "FOREIGN KEY (video_info_FK) REFERENCES video_info(id)" )
+    
+    POWER_READINGS_COLS = ("id INTEGER PRIMARY KEY,"
+                           "timestamp REAL,"
+                           "power REAL" )
     
 
     def __init__(self): #consider overriding this to input a filepath  for the DB to be stored, if possible
@@ -66,6 +69,7 @@ class vEQ_database(object):
             cursor.execute("DROP TABLE IF EXISTS sys_info")
             cursor.execute("DROP TABLE IF EXISTS video_info")
             cursor.execute("DROP TABLE IF EXISTS readings")
+            cursor.execute("DROP TABLE IF EXISTS power_readings")
             print "Tables dropped"
     
     def initDB(self):
@@ -77,7 +81,8 @@ class vEQ_database(object):
 #                 the top of the class rather than within the code.
             cursor.execute("CREATE TABLE if NOT exists sys_info (%s);" % self.SYS_INFO_COLS) 
             cursor.execute("CREATE TABLE if NOT exists video_info (%s);" % self.VIDEO_INFO_COLS) 
-            cursor.execute("CREATE TABLE if NOT exists readings (%s);" % self.READINGS_COLS) 
+            cursor.execute("CREATE TABLE if NOT exists ps_readings (%s);" % self.PS_READINGS_COLS) 
+            cursor.execute("CREATE TABLE if NOT exists power_readings (%s);" % self.POWER_READINGS_COLS) 
         
     def insertIntoReadingsTable(self, values):
         '''
@@ -90,10 +95,9 @@ class vEQ_database(object):
         '''
         with self.db:
             cursor = self.db.cursor()  
-            cursor.execute("INSERT INTO readings VALUES (null,?,?,?,?,?,?,?)", values)
+            cursor.execute("INSERT INTO ps_readings VALUES (null,?,?,?,?,?,?)", values)
             global readings_index 
             readings_index = cursor.lastrowid
-            print readings_index
             return readings_index
             # values =[timestamp, power, cpupercent, memprectent, rss, sys_info_FK, video_info_FK)
             
@@ -112,7 +116,6 @@ class vEQ_database(object):
             cursor.execute("INSERT INTO sys_info VALUES (null,?,?,?,?,?);", values)
 #             global sysinfo_index
             self.sysinfo_index = cursor.lastrowid
-            print self.sysinfo_index
             return self.sysinfo_index
 
       
@@ -127,11 +130,14 @@ class vEQ_database(object):
             cursor = self.db.cursor()  
             cursor.execute("INSERT INTO video_info VALUES (null,?,?,?,?,?,?)", values)
             self.videoinfo_index = cursor.lastrowid
-            print self.videoinfo_index
             return self.videoinfo_index
            
 #          ftamp INT, name TEXT, specs TEXT, codec TEXT, width TEXT, height TEXT
            
+           
+    def insertIntoPowerTable(self, values):
+        pass
+        
 if __name__ == '__main__':
     vEQdb = vEQ_database()
 #     vEQdb.clearDB()
