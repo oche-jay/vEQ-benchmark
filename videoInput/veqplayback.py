@@ -12,6 +12,7 @@ import vlc, sys, os, psutil
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 import powermonitor
+import logging
 
 
 class VEQPlayback:
@@ -166,6 +167,7 @@ class VEQPlayback:
             player.video_set_marquee_int(vlc.VideoMarqueeOption.Position, vlc.Position.TopRight)
             
             while True:
+                print "called"
                 count += 1
 #               perhaps move this to the process monitor class or nah?
                 timestamp = time.time()
@@ -175,8 +177,10 @@ class VEQPlayback:
                 net_sent_val = psutil.net_io_counters().bytes_sent
                 net_recv_val = psutil.net_io_counters().bytes_recv
                 
-                power_val = float(self.meter.get_device_reading())
-              
+                power_val = self.meter.get_device_reading()
+                logging.debug("Got power measurement: " +  str(power_val))
+                power_v = float(power_val)
+                
                 rss =  mem_val.rss
                 
 #                 cpu_valString = str.format("CPU: %3.1f%%%%\n" % cpu_val)

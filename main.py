@@ -6,6 +6,7 @@ Created on 24 Feb 2015
 import os
 import sys
 import time
+import logging
 
 from pymediainfo import MediaInfo
 
@@ -14,11 +15,19 @@ import processmonitor.processMonitor as procmon
 import videoInput.veqplayback as vlc
 from powermonitor.voltcraftmeter import VoltcraftMeter
 
+logging.getLogger().setLevel(logging.DEBUG)
+logging.info("Started VEQ_Benchmark")
 
+   
 if __name__ == '__main__':
+
     vlc_args = "--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq --verbose -1"
+    
     meter = VoltcraftMeter()
-    meter.initDevice() #some kind of polymoprphism is needed here so that meter can be any type of device
+    
+    if meter.initDevice() is None:
+        sys.stderr.write("device wasn't opened") #some kind of polymoprphism is needed here so that meter can be any type of device
+    
     vEQdb = DB.vEQ_database()
 #     vEQdb.clearDB()
 #     sys.exit()
