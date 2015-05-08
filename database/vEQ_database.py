@@ -4,7 +4,6 @@ Created on 24 Feb 2015
 @author: oche
 '''
 import sys
-
 import sqlite3 as lite
 
 
