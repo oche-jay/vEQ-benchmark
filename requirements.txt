@@ -2,3 +2,4 @@ pyqt4
 pymediainfo
 psutil
 hidapi
+youtube-dl

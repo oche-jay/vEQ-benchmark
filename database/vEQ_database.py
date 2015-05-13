@@ -39,7 +39,11 @@ class vEQ_database(object):
     
     POWER_READINGS_COLS = ("id INTEGER PRIMARY KEY,"
                            "timestamp REAL,"
-                           "power REAL" )
+                           "power REAL, "
+                           "sys_info_FK INTEGER, "
+                           "video_info_FK INTEGER, "
+                           "FOREIGN KEY (sys_info_FK) REFERENCES sys_info(id), "
+                           "FOREIGN KEY (video_info_FK) REFERENCES video_info(id)" )
     
 
     def __init__(self): #consider overriding this to input a filepath  for the DB to be stored, if possible
@@ -65,10 +69,10 @@ class vEQ_database(object):
         with self.db:
             cursor = self.db.cursor()
             print "Dropping tables"
+            cursor.execute("DROP TABLE IF EXISTS ps_readings")
+            cursor.execute("DROP TABLE IF EXISTS power_readings")
             cursor.execute("DROP TABLE IF EXISTS sys_info")
             cursor.execute("DROP TABLE IF EXISTS video_info")
-            cursor.execute("DROP TABLE IF EXISTS readings")
-            cursor.execute("DROP TABLE IF EXISTS power_readings")
             print "Tables dropped"
     
     def initDB(self):
@@ -135,19 +139,34 @@ class vEQ_database(object):
            
            
     def insertIntoPowerTable(self, values):
-        pass
+        '''
+        Insert given values into video_info table
+        params:
+        values - a list of values for the power readings table
+                 [ "id INTEGER PRIMARY KEY,"
+                           "timestamp REAL,"
+                           "power REAL", 
+                           "FOREIGN KEY (sys_info_FK) REFERENCES sys_info(id), "
+                             "FOREIGN KEY (video_info_FK) REFERENCES video_info(id)" ]
+        '''
+        with self.db:
+            cursor = self.db.cursor()  
+            cursor.execute("INSERT INTO power_readings VALUES (null,?,?,?,?)", values)
+            self.videoinfo_index = cursor.lastrowid
+            return self.videoinfo_index
         
 if __name__ == '__main__':
     vEQdb = vEQ_database()
+    vEQdb.clearDB()
+#     vEQdb.initDB()
+#     import processmonitor.processMonitor as procMon
+#     import time
+#     timestamp = time.time()
+#     proc = procMon.get_processor()
+#     os = procMon.get_os()
+# 
+#     values = [timestamp,os,proc,"gpu","specs"]
+#     vEQdb.insertIntoSysInfoTable(values)
 #     vEQdb.clearDB()
-    vEQdb.initDB()
-    import processmonitor.processMonitor as procMon
-    import time
-    timestamp = time.time()
-    proc = procMon.get_processor()
-    os = procMon.get_os()
-
-    values = [timestamp,os,proc]
-    vEQdb.insertIntoSysInfoTable(values)
 
         

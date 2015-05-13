@@ -26,7 +26,7 @@ class VoltcraftMeter():
             count = 0
             while True and hid_device:
                 if PROFILE:
-                    logging.debug("Profiling on")
+                    logging.debug("Profiling ON")
                     if (count == (PROFILE_DURATION + 1) ):
                         print count, "Break "
                         break 
@@ -145,7 +145,7 @@ class VoltcraftMeter():
                 
                 return float(measurement1)/10 # + " Watts"
             else:
-                sys.stderr.write("VC870 Function Not yet implemented")  
+                logging.warning("VC870 Function Not yet implemented: " + str(vc_function))  
                 return -1
         except Exception as e:
             sys.stderr.write(e)

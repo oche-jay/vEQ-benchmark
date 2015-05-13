@@ -167,7 +167,6 @@ class VEQPlayback:
             player.video_set_marquee_int(vlc.VideoMarqueeOption.Position, vlc.Position.TopRight)
             
             while True:
-                print "called"
                 count += 1
 #               perhaps move this to the process monitor class or nah?
                 timestamp = time.time()
@@ -201,7 +200,10 @@ class VEQPlayback:
 #                 print psutil.net_io_counters()
                 
                 values = [timestamp, cpu_val, mempercent_val, rss, sys_index_FK, video_index_FK]
+                powers = [timestamp,power_v,sys_index_FK, video_index_FK] 
                 self.db.insertIntoReadingsTable(values)
+                self.db.insertIntoPowerTable(powers)
+                
 #                 
 #                 if sys.platform != 'darwin': # Availability: all platforms except OSX
 #                     print vlcProcess.io_counters()
