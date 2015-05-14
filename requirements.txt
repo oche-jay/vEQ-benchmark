@@ -3,3 +3,4 @@ pymediainfo
 psutil
 hidapi
 youtube-dl
+numpy

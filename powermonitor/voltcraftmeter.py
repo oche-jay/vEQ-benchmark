@@ -1,3 +1,5 @@
+
+
 '''
 Python code to read from VC 870 meter adapted from C++ and Perl Code from 
 Created on 28 Mar 2015
@@ -12,7 +14,6 @@ import logging
 
 PROFILE = True
 PROFILE_DURATION = 0 # (20 takes about 1 sec)
-
 BAUD_SPEED = int(9600)
 
 # TODO: Make a parent class for all types of energymeter
@@ -98,7 +99,7 @@ class VoltcraftMeter():
         '''
         outputstring = ""
         count = 0
-    # TODO move this loop to main
+    # TODO move this loop to end_time
         if self.hid_device is not None:
             while count < 80:     #if count gets to 80 then maybe the device isnt on, return nothing so that caller doesnt wait longer than necessaru
                 res = 0;
@@ -164,7 +165,7 @@ if __name__ == '__main__':
             os.makedirs("../profile")
         sys.stderr.write("Starting Profiling\n")
         profile_filename = "../profile/voltcraftmeter_profile.txt"
-        cProfile.run('vc.main()',profile_filename)
+        cProfile.run('vc.end_time()',profile_filename)
         statsfile =  open("../profile/voltcraft_profile_stats.txt", "wb")
         p = pstats.Stats(profile_filename, stream=statsfile)
         stats = p.strip_dirs().sort_stats('cumulative')

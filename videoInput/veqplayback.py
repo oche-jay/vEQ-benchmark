@@ -15,7 +15,7 @@ import powermonitor
 import logging
 
 
-class VEQPlayback:
+class  VEQPlayback:
     '''
     Class encapsulating the playback of a video using the VLC Media Player
     '''
@@ -33,6 +33,11 @@ class VEQPlayback:
         self.player = self.getPlayer(movie,args) 
         self.db = db
         self.meter = meter
+        self.duration = None
+    
+    def end_callback(self, event):
+        print "ended niga"
+        self.cleanExit(0)
          
     def getPlayer(self,movie,args):
         '''
@@ -59,6 +64,9 @@ class VEQPlayback:
         list_player =  instance.media_list_player_new()
         list_player.set_media_player(player)
         list_player.set_media_list(media_list)
+        
+        event_manager = player.event_manager()
+        event_manager.event_attach(vlc.EventType.MediaPlayerEndReached, self.end_callback)
     
         return player    
     
@@ -69,6 +77,7 @@ class VEQPlayback:
         vlcApp = QtGui.QApplication(sys.argv)
         vlcWidget = QtGui.QFrame()  
         vlcWidget.setWindowTitle("vEQ_benchmark")  
+#         TODO: set window size here
         vlcWidget.show()
 #         vlcWidget.raise_()
         
@@ -84,22 +93,22 @@ class VEQPlayback:
             player.set_xwindow(vlcWidget.winId())
             self.has_own_widget = True
          
-        player.play()
-
+        
         
     #   Shift the communication with the UI to another QThread called obJThread
         self.qThread = QtCore.QThread()
-        qobjectformainloop = self.QObjectThreadforMainLoop(self,self.db,self.meter) #create the thread handler thing and move it to the new qhtread created
+        qobjectformainloop = self.QObjectThreadforMainLoop(self,self.db,self.meter,self.duration) #create the thread handler thing and move it to the new qhtread created
         qobjectformainloop.moveToThread(self.qThread)
         
 #       register that when qobjectformainloop finished signal is emitted call qthread.quit i.e qthrad.quit is the slot for the 'finsighed' signal
         qobjectformainloop.finished.connect(self.qThread.quit)
-        
-#         register that whenever qthread's started signal is emmitted, call qobjectformainlop longrunning method slot'
+#        register that whenever qthread's started signal is emmitted, call qobjectformainlop longrunning method slot'
         self.qThread.started.connect(qobjectformainloop.longRunning)
     #   this gets called when when the finished signal is emmited by thread or somethingf
-#         self.qThread.finished.connect(vlcApp.exit)
+        self.qThread.finished.connect(vlcApp.exit)
          
+        player.play()
+
         self.qThread.start()
         
 #         loop to play video bck ?
@@ -108,7 +117,7 @@ class VEQPlayback:
     
     def cleanExit(self,int): 
         self.qThread.exit(0)
-        sys.exit(int)   
+           
         
     def print_info(self,player):
        """Print information about the media"""
@@ -128,8 +137,12 @@ class VEQPlayback:
        except Exception:
            print('Error: %s' % sys.exc_info()[1])
            
-    def play(self):
-           self.setupPlayback(self.player)
+    def play(self,duration):
+        '''
+        Play the movie for the duration
+        '''
+        self.duration = duration
+        self.setupPlayback(self.player)
      
 
 
@@ -137,14 +150,15 @@ class VEQPlayback:
     # http://blog.qt.digia.com/blog/2007/07/05/qthreads-no-longer-abstract
     # http://stackoverflow.com/questions/6783194/background-thread-with-qthread-in-pyqt
     class QObjectThreadforMainLoop(QtCore.QObject):
-             
         finished = QtCore.pyqtSignal()
-                
-        def __init__(self,a_playback_obj,db,meter):
+             
+        def __init__(self,a_playback_obj,db,meter,duration):
             super(VEQPlayback.QObjectThreadforMainLoop, self).__init__()
             self.vlc_playback_object = a_playback_obj
             self.db = db
             self.meter = meter
+            self.duration = duration
+            
     
         '''
         This method is the "longrunning" thread that handles data collection  for the videeo playback process in a seperate thread
@@ -152,11 +166,8 @@ class VEQPlayback:
         def longRunning(self):
             count = 0
             vlcProcess = self.vlc_playback_object.vlcProcess
-#             vlcProcess.cpu_percent(interval=1)
-            
             sys_index_FK = self.db.sysinfo_index
-            video_index_FK = self.db.videoinfo_index
-                
+            video_index_FK = self.db.videoinfo_index   
             cpu_val = vlcProcess.cpu_percent()
             mempercent_val = vlcProcess.memory_percent()
             marq_str = str.format("CPU: %3.1f%%%%\nMEM: %3.1f%%%%\n" % (cpu_val,mempercent_val)) #need to escape %% twice
@@ -203,15 +214,13 @@ class VEQPlayback:
                 powers = [timestamp,power_v,sys_index_FK, video_index_FK] 
                 self.db.insertIntoReadingsTable(values)
                 self.db.insertIntoPowerTable(powers)
-                
-#                 
-#                 if sys.platform != 'darwin': # Availability: all platforms except OSX
-#                     print vlcProcess.io_counters()
-#                     
+                if count  >= self.duration:
+                   print "COULD END NOW!!!!"
+                   break
                 time.sleep(1) 
-    
+            
 #                     print_info(self.player)   
-            def emitFinsished():
+            def emitFinished():
                 print "Object Finisiing"
                 self.finished.emit()
 

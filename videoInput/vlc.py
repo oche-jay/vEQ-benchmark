@@ -3653,7 +3653,7 @@ def libvlc_vprinterr(fmt, ap):
 def libvlc_new(argc, argv):
     '''Create and initialize a libvlc instance.
     This functions accept a list of "command line" arguments similar to the
-    main(). These arguments affect the LibVLC instance default configuration.
+    end_time(). These arguments affect the LibVLC instance default configuration.
     @param argc: the number of arguments (should be 0).
     @param argv: list of arguments (should be NULL).
     @return: the libvlc instance or NULL in case of error.

@@ -8,21 +8,27 @@ import sys
 import time
 import logging
 
-from pymediainfo import MediaInfo
+from util.pymediainfo import MediaInfo
+from youtube_dl import YoutubeDL
+import json
 
 import database.vEQ_database as DB
 import processmonitor.processMonitor as procmon
 import videoInput.veqplayback as vlc
 from powermonitor.voltcraftmeter import VoltcraftMeter
 
-# TODO: Set logging level from argument
-logging.getLogger().setLevel(logging.WARNING)
-logging.info("Started VEQ_Benchmark")
-
 verbosity = -1
-default_youtube_quality="bestvideo"
+default_youtube_quality= 'bestvideo'
+# duration to run benchmark or -1 for length of video
+bench_duration= 120  #or -1
+
+#move to a util or stats class
+
    
 if __name__ == '__main__':
+    # TODO: Set logging level from argument
+    logging.getLogger().setLevel(logging.WARNING)
+    logging.info("Started VEQ_Benchmark")
 
     vlc_args = "--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq " + "--verbose " + str(verbosity)
     
@@ -64,21 +70,20 @@ if __name__ == '__main__':
                         movie_codec = track.codec
                         movie_height = track.height
                         movie_width = track.width
-            elif ("yout" or "goog" in movie):
-                logging.debug("Found Youtube video")
-                import youtube_dl
-                
+            elif ("yout"  in movie):
+                logging.debug("Found Youtube video: Using youtube-dl to get information")
                 youtube_dl_opts = {
                          'format' : default_youtube_quality,
-                         'skip_download' : True,
                          'quiet' : True
                     }
-                with youtube_dl.YoutubeDL(youtube_dl_opts) as ydl:
+                with YoutubeDL(youtube_dl_opts) as ydl:
                     try:
-                        ydl.download([movie])
-                        movie = ydl.url
-                        movie_data = str(ydl.info_dict) #get json file from youtube dl or lua if possible
-                        movie_codec, movie_height, movie_width = ydl.format,-1,-1
+                        info_dict = ydl.extract_info(movie, download=False)
+                        movie = info_dict['url']
+                        movie_data = str(json.dumps(info_dict)) #get json file from youtube dl or lua if possible
+                        movie_codec = info_dict['format']
+                        movie_height = info_dict['height']
+                        movie_width = info_dict['width']
                     except:
                         error = sys.exc_info()
                         logging.error("Unexpected error while retrieve details using Youtube-DL: " + str(error))
@@ -98,7 +103,20 @@ if __name__ == '__main__':
         video_index = vEQdb.insertIntoVideoInfoTable(video_values)
         
         vlcPlayback = vlc.VEQPlayback(movie,vEQdb,vlc_args,meter)
-        vlcPlayback.play()    
+        vlcPlayback.play(benchduration)  
+        end_time = time.time()
+        powers = vEQdb.getValuesFromPowerTable(start_time, end_time)
+        cpus = vEQdb.getCPUValuesFromPSTable(start_time, end_time)
+        memorys = vEQdb.getMemValuesFromPSTable(start_time, end_time)
+    
+        
+        import numpy
+        p = numpy.asarray(util.cleanResults(powers))
+        c = numpy.asarray(util.cleanResults(cpus))
+        print p.mean()
+        print c.mean()
+          
+        
     else:
         print('Usage: %s <movie_filename>' % sys.argv[0])
  # Cleanup

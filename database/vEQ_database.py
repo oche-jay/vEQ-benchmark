@@ -58,35 +58,37 @@ class vEQ_database(object):
         except lite.Error, e:
             print "Error %s:" % e.args[0]
             sys.exit(1)
-        finally:
-            if self.db:
-                self.db.close
+#         finally:
+#             if self.db:
+#                 self.db.commit()
                 
     def getDB(self):
         return self.db
-    
-    def clearDB(self):
-        with self.db:
-            cursor = self.db.cursor()
-            print "Dropping tables"
-            cursor.execute("DROP TABLE IF EXISTS ps_readings")
-            cursor.execute("DROP TABLE IF EXISTS power_readings")
-            cursor.execute("DROP TABLE IF EXISTS sys_info")
-            cursor.execute("DROP TABLE IF EXISTS video_info")
-            print "Tables dropped"
+                        
     
     def initDB(self):
         with self.db as db:
             cursor = db.cursor()  
-            #This is an SQL injection vulnerabilty but 
-#             1. This should not be exposed to users 
-#             2. Makes it easier to change the structure of the table by changing the COLS string at 
-#                 the top of the class rather than within the code.
             cursor.execute("CREATE TABLE if NOT exists sys_info (%s);" % self.SYS_INFO_COLS) 
             cursor.execute("CREATE TABLE if NOT exists video_info (%s);" % self.VIDEO_INFO_COLS) 
             cursor.execute("CREATE TABLE if NOT exists ps_readings (%s);" % self.PS_READINGS_COLS) 
             cursor.execute("CREATE TABLE if NOT exists power_readings (%s);" % self.POWER_READINGS_COLS) 
-        
+            #This is an SQL injection vulnerability but 
+#             1. This should not be exposed to users 
+#             2. Makes it easier to change the structure of the table by changing the COLS string at 
+#                 the top of the class rather than within the code.
+    
+    def clearDB(self):
+        with self.db as db:
+            cursor = db.cursor()
+            print "Dropping tables"
+            db.execute('PRAGMA FOREIGN_KEYS=OFF')
+            db.execute("DROP TABLE power_readings;")
+            db.execute("DROP TABLE ps_readings;")
+            db.execute("DROP TABLE sys_info;")
+            db.execute("DROP TABLE video_info;")
+      
+
     def insertIntoReadingsTable(self, values):
         '''
         Insert given list of values into the Reading table
@@ -136,7 +138,7 @@ class vEQ_database(object):
             return self.videoinfo_index
            
 #          ftamp INT, name TEXT, specs TEXT, codec TEXT, width TEXT, height TEXT
-           
+        
            
     def insertIntoPowerTable(self, values):
         '''
@@ -147,7 +149,7 @@ class vEQ_database(object):
                            "timestamp REAL,"
                            "power REAL", 
                            "FOREIGN KEY (sys_info_FK) REFERENCES sys_info(id), "
-                             "FOREIGN KEY (video_info_FK) REFERENCES video_info(id)" ]
+                        "FOREIGN KEY (video_info_FK) REFERENCES video_info(id)" ]
         '''
         with self.db:
             cursor = self.db.cursor()  
@@ -155,10 +157,43 @@ class vEQ_database(object):
             self.videoinfo_index = cursor.lastrowid
             return self.videoinfo_index
         
+        
+    def getValuesFromPowerTable(self, start_time, end_time):
+        '''
+        Get readings from the Power Table that fall between these times
+        '''    
+        with self.db as db:
+            cursor = db.cursor()
+            cursor.execute("SELECT power FROM power_readings WHERE timestamp BETWEEN ? AND ?", (start_time, end_time))
+            values = cursor.fetchall()
+        return values
+        
+    def getCPUValuesFromPSTable(self, start_time, end_time):
+        '''
+        Get readings from the Power Table that fall between these times
+        '''    
+        with self.db as db:
+            cursor = db.cursor()
+            cursor.execute("SELECT cpu_percent FROM ps_readings WHERE timestamp BETWEEN ? AND ?", (start_time, end_time))
+            values = cursor.fetchall()
+        return values
+    
+    def getMemValuesFromPSTable(self, start_time, end_time):
+        '''
+        Get readings from the Power Table that fall between these times
+        '''    
+        with self.db as db:
+            cursor = db.cursor()
+            cursor.execute("SELECT mem_percent FROM ps_readings WHERE timestamp BETWEEN ? AND ?", (start_time, end_time))
+            values = cursor.fetchall()
+        return values
+    
+    
 if __name__ == '__main__':
     vEQdb = vEQ_database()
-    vEQdb.clearDB()
+#     vEQdb.clearDB()
 #     vEQdb.initDB()
+    vEQdb.clearDB()
 #     import processmonitor.processMonitor as procMon
 #     import time
 #     timestamp = time.time()
