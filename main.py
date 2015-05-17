@@ -54,23 +54,23 @@ if __name__ == '__main__':
     
     if sys.argv[1:] and sys.argv[1] not in ('-h', '--help'):
 #         write to vid info db
-        movie = os.path.expanduser(sys.argv[1])
-        if ("http" or "www") not in movie and not (os.access(movie, os.R_OK)):
-            print('Error: %s file not readable' % movie)
-            logging.warning('Error: %s file not readable' % movie)
+        video = os.path.expanduser(sys.argv[1])
+        if ("http" or "www") not in video and not (os.access(video, os.R_OK)):
+            print('Error: %s file not readable' % video)
+            logging.warning('Error: %s file not readable' % video)
             sys.exit(1)
 #         we might be able to gety some of this info form vlc herself although mediainfo tends to have much more info
         try: 
-            if ("yout" or "goog") not in movie: #this is weak, use a better regex to capture youtube or googlevideo urls
-                logging.debug("Found regular movie")  
-                movie_info = MediaInfo.parse(movie)
-                movie_data = movie_info.to_json()
-                for track in movie_info.tracks:
+            if ("yout" or "goog") not in video: #this is weak, use a better regex to capture youtube or googlevideo urls
+                logging.debug("Found regular video")  
+                video_info = MediaInfo.parse(video)
+                video_data = video_info.to_json()
+                for track in video_info.tracks:
                     if track.track_type == 'Video':
-                        movie_codec = track.codec
-                        movie_height = track.height
-                        movie_width = track.width
-            elif ("yout"  in movie):
+                        video_codec = track.codec
+                        video_height = track.height
+                        video_width = track.width
+            elif ("yout"  in video):
                 logging.debug("Found Youtube video: Using youtube-dl to get information")
                 youtube_dl_opts = {
                          'format' : default_youtube_quality,
@@ -78,12 +78,12 @@ if __name__ == '__main__':
                     }
                 with YoutubeDL(youtube_dl_opts) as ydl:
                     try:
-                        info_dict = ydl.extract_info(movie, download=False)
-                        movie = info_dict['url']
-                        movie_data = str(json.dumps(info_dict)) #get json file from youtube dl or lua if possible
-                        movie_codec = info_dict['format']
-                        movie_height = info_dict['height']
-                        movie_width = info_dict['width']
+                        info_dict = ydl.extract_info(video, download=False)
+                        video = info_dict['url']
+                        video_data = str(json.dumps(info_dict)) #get json file from youtube dl or lua if possible
+                        video_codec = info_dict['format']
+                        video_height = info_dict['height']
+                        video_width = info_dict['width']
                     except:
                         error = sys.exc_info()
                         logging.error("Unexpected error while retrieve details using Youtube-DL: " + str(error))
@@ -92,18 +92,18 @@ if __name__ == '__main__':
         except:
             error = sys.exc_info()
             logging.error("Unexpected error: " + str(error))
-            movie_data = str(error)
-            movie_codec, movie_height, movie_width = "Null",0,0
+            video_data = str(error)
+            video_codec, video_height, video_width = "Null",0,0
 
 #       Write info to videoinfo database
         """
          values = [timestamp INT, name TEXT, specs TEXT, codec TEXT, width TEXT, height TEXT ]
         """
-        video_values = [start_time,movie,movie_data,movie_codec,movie_width,movie_height] 
+        video_values = [start_time,video,video_data,video_codec,video_width,video_height] 
         video_index = vEQdb.insertIntoVideoInfoTable(video_values)
         
-        vlcPlayback = vlc.VEQPlayback(movie,vEQdb,vlc_args,meter)
-        vlcPlayback.play(benchduration)  
+        vlcPlayback = vlc.VEQPlayback(video,vEQdb,vlc_args,meter)
+        vlcPlayback.play(bench_duration)  
         end_time = time.time()
         powers = vEQdb.getValuesFromPowerTable(start_time, end_time)
         cpus = vEQdb.getCPUValuesFromPSTable(start_time, end_time)

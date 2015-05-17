@@ -32,6 +32,10 @@ class vEQ_database(object):
                      "cpu_percent REAL, "
                      "mem_percent REAL, "
                      "resident_set_size INTEGER, "
+                     "net_sent INTEGER,"
+                     "net_recv INTEGER,"
+                     "io_bytesread INTEGER,"
+                     "io_byteswrite INTEGER,"
                      "sys_info_FK INTEGER, "
                      "video_info_FK INTEGER, "
                      "FOREIGN KEY (sys_info_FK) REFERENCES sys_info(id), "
@@ -46,22 +50,32 @@ class vEQ_database(object):
                            "FOREIGN KEY (video_info_FK) REFERENCES video_info(id)" )
     
 
-    def __init__(self): #consider overriding this to input a filepath  for the DB to be stored, if possible
+    def __init__(self,db_loc=None): #consider overriding this to input a filepath  for the DB to be stored, if possible
         '''
         Constructor
         '''
+        default_loc = '../vEQ_db' 
+        if db_loc is None:
+            db_loc = default_loc
         try:
-            self.db = lite.connect('../vEQ_db', check_same_thread = False) #TODO: Make this file in a more sensible location
-            videoinfo_index = 0
-            sysinfo_index = 0
-            readings_index = 0
+            self.db = lite.connect(db_loc, check_same_thread = False) 
+#             videoinfo_index = 0
+#             sysinfo_index = 0
+#             readings_index = 0
         except lite.Error, e:
             print "Error %s:" % e.args[0]
             sys.exit(1)
 #         finally:
 #             if self.db:
 #                 self.db.commit()
-                
+    
+    def printTablesinDB(self):
+        with self.db as db:
+            print db
+            cursor = db.cursor() 
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")  
+            print tuple(cursor)
+                      
     def getDB(self):
         return self.db
                         
@@ -82,11 +96,11 @@ class vEQ_database(object):
         with self.db as db:
             cursor = db.cursor()
             print "Dropping tables"
-            db.execute('PRAGMA FOREIGN_KEYS=OFF')
-            db.execute("DROP TABLE power_readings;")
-            db.execute("DROP TABLE ps_readings;")
-            db.execute("DROP TABLE sys_info;")
-            db.execute("DROP TABLE video_info;")
+            cursor.execute('PRAGMA FOREIGN_KEYS=OFF')
+            cursor.executescript("DROP TABLE power_readings;")
+            cursor.execute("DROP TABLE  ps_readings;")
+            cursor.execute("DROP TABLE sys_info;")
+            cursor.execute("DROP TABLE video_info;")
       
 
     def insertIntoReadingsTable(self, values):
@@ -95,12 +109,12 @@ class vEQ_database(object):
         
         Argument:
         values - a list of (a single-tuple of) values to be input into the readings table
-                 format is values = [timestamp, power, cpu_percent, mem_percent, rss, sys_info_FK, video_info_FK)
+                 format is values = [timestamp, power, cpu_percent, mem_percent, rss, net_sent, net_recv, ioread, iowrite, sys_info_FK, video_info_FK)
             
         '''
         with self.db:
             cursor = self.db.cursor()  
-            cursor.execute("INSERT INTO ps_readings VALUES (null,?,?,?,?,?,?)", values)
+            cursor.execute("INSERT INTO ps_readings VALUES (null,?,?,?,?,?,?,?,?,?,?)", values)
             global readings_index 
             readings_index = cursor.lastrowid
             return readings_index
@@ -188,12 +202,25 @@ class vEQ_database(object):
             values = cursor.fetchall()
         return values
     
+    def getValuesFromPSTable(self, column_name, start_time, end_time):
+        '''
+        Get readings from the Power Table that fall between these times
+        '''    
+        with self.db as db:
+            db.row_factory = lambda cursor, row: row[0]
+            cursor = db.cursor()
+            execute_string = ' '.join(("SELECT ", column_name, "FROM ps_readings WHERE timestamp BETWEEN ? AND ?"))
+            cursor.execute(execute_string, (start_time, end_time))
+            values = cursor.fetchall()
+        return values
     
 if __name__ == '__main__':
     vEQdb = vEQ_database()
 #     vEQdb.clearDB()
 #     vEQdb.initDB()
+    vEQdb.printTablesinDB()
     vEQdb.clearDB()
+    vEQdb.printTablesinDB()
 #     import processmonitor.processMonitor as procMon
 #     import time
 #     timestamp = time.time()

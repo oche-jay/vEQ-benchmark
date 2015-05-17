@@ -22,27 +22,26 @@ class  VEQPlayback:
     vlcProcess =  psutil.Process()
     qthread = None
        
-    def __init__(self,movie,db,args,meter):
+    def __init__(self,video,db,args,meter):
         """
         Params
-        movie: the movie to playback
+        video: the video to playback
         db: the sqlite db that stats will be written to
         args: args to startup vlc
         meter: a source for power readings - eg killawatt meter, voltcraft meter, acpi, smc, etc etc
         """
-        self.player = self.getPlayer(movie,args) 
+        self.player = self.getPlayer(video,args) 
         self.db = db
         self.meter = meter
         self.duration = None
     
     def end_callback(self, event):
-        print "ended niga"
         self.cleanExit(0)
          
-    def getPlayer(self,movie,args):
+    def getPlayer(self,video,args):
         '''
          Setup and return a VLC Player 
-         @param video: URL or File location for the movie or video to be played 
+         @param video: URL or File location for the video or video to be played 
         '''
 #         print 'Creating Player'
         instance = vlc.Instance(args)
@@ -50,8 +49,8 @@ class  VEQPlayback:
 #       Need to create a MediaListPlayer and add videos to the playlist. This 
 #       is the only way to play back Youtube.
         try:
-            media = instance.media_new(movie) 
-            media_list = instance.media_list_new([movie]) #a list of one movie
+            media = instance.media_new(video) 
+            media_list = instance.media_list_new([video]) #a list of one video
         except NameError:
             print('NameError: %s (%s vs LibVLC %s)' % (sys.exc_info()[1],
                                                        vlc.__version__,
@@ -101,7 +100,7 @@ class  VEQPlayback:
         qobjectformainloop.moveToThread(self.qThread)
         
 #       register that when qobjectformainloop finished signal is emitted call qthread.quit i.e qthrad.quit is the slot for the 'finsighed' signal
-        qobjectformainloop.finished.connect(self.qThread.quit)
+        qobjectformainloop.finished.connect(self.qThread.exit)
 #        register that whenever qthread's started signal is emmitted, call qobjectformainlop longrunning method slot'
         self.qThread.started.connect(qobjectformainloop.longRunning)
     #   this gets called when when the finished signal is emmited by thread or somethingf
@@ -139,7 +138,7 @@ class  VEQPlayback:
            
     def play(self,duration):
         '''
-        Play the movie for the duration
+        Play the video for the duration
         '''
         self.duration = duration
         self.setupPlayback(self.player)
@@ -177,6 +176,9 @@ class  VEQPlayback:
             player.video_set_marquee_int(vlc.VideoMarqueeOption.Size, 50)  # pixels
             player.video_set_marquee_int(vlc.VideoMarqueeOption.Position, vlc.Position.TopRight)
             
+            sent = psutil.net_io_counters().bytes_sent
+            recv = psutil.net_io_counters().bytes_recv
+            
             while True:
                 count += 1
 #               perhaps move this to the process monitor class or nah?
@@ -184,55 +186,48 @@ class  VEQPlayback:
                 cpu_val = vlcProcess.cpu_percent()
                 mempercent_val = vlcProcess.memory_percent()
                 mem_val = vlcProcess.memory_info()
-                net_sent_val = psutil.net_io_counters().bytes_sent
-                net_recv_val = psutil.net_io_counters().bytes_recv
+                rss =  mem_val.rss
+                io_read = vlcProcess.io_counters().read_bytes
+                io_write = vlcProcess.io_counters().write_bytes
                 
+      
                 power_val = self.meter.get_device_reading()
                 logging.debug("Got power measurement: " +  str(power_val))
                 power_v = float(power_val)
                 
-                rss =  mem_val.rss
-                
-#                 cpu_valString = str.format("CPU: %3.1f%%%%\n" % cpu_val)
-#                 mem_valString = str.format("MEM: %3.1f%%%%\n" % mempercent_val)
-#                 net_valString = str.format("MEM: %3.1f%%%%\n" % net_recv_val)
-#                 power_valString = str.format("POWER: %3.1f%%%%W\n" % power_val)              
-#                 print sys_index_FK, video_index_FK
-                                
-              
                 marq_str = str.format("CPU: %3.1f%%%%\nMEM: %3.1f%%%%\nPOWR: %3.1fW\n" % (cpu_val,mempercent_val,power_val)) #need to escape %% twice
                 player.video_set_marquee_string(vlc.VideoMarqueeOption.Text, marq_str)
-# #                 print self.db
-#                 print marq_str
-#                 print vlcProcess.connections(kind='inet')
-# #                 print mem_val.rss
-#                 print mem_val
-# #                 print psutil.net_io_counters().bytes_sent
-#                 print psutil.net_io_counters()
+# 
+                sent_now = psutil.net_io_counters().bytes_sent
+                recv_now = psutil.net_io_counters().bytes_recv
                 
-                values = [timestamp, cpu_val, mempercent_val, rss, sys_index_FK, video_index_FK]
+                
+                    
+                values = [timestamp, cpu_val, mempercent_val, rss,sent_now, recv_now, io_read, io_write, sys_index_FK, video_index_FK]
                 powers = [timestamp,power_v,sys_index_FK, video_index_FK] 
                 self.db.insertIntoReadingsTable(values)
                 self.db.insertIntoPowerTable(powers)
-                if count  >= self.duration:
-                   print "COULD END NOW!!!!"
-                   break
+                
+                if count  >= self.duration and self.duration > 0:
+                    logging.debug("Benchmark duration completed...Exiting")
+                    self.finished.emit()
+                    break
                 time.sleep(1) 
             
 #                     print_info(self.player)   
             def emitFinished():
-                print "Object Finisiing"
+                logging.debug("Video playback completed...Exiting")
                 self.finished.emit()
 
 
 
 if __name__ == '__main__':
     if sys.argv[1:] and sys.argv[1] not in ('-h', '--help'):
-        movie = os.path.expanduser(sys.argv[1])
-        if not os.access(movie, os.R_OK):
-            print('Error: %s file not readable' % movie)
+        video = os.path.expanduser(sys.argv[1])
+        if not os.access(video, os.R_OK):
+            print('Error: %s file not readable' % video)
             sys.exit(1)
-        vlcPlayback = VEQPlayback(movie)
+        vlcPlayback = VEQPlayback(video)
         vlcPlayback.play()
 
         

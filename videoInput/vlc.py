@@ -2950,36 +2950,36 @@ class MediaPlayer(_Ctype):
 
     
     def get_length(self):
-        '''Get the current movie length (in ms).
-        @return: the movie length (in ms), or -1 if there is no media.
+        '''Get the current video length (in ms).
+        @return: the video length (in ms), or -1 if there is no media.
         '''
         return libvlc_media_player_get_length(self)
 
     
     def get_time(self):
-        '''Get the current movie time (in ms).
-        @return: the movie time (in ms), or -1 if there is no media.
+        '''Get the current video time (in ms).
+        @return: the video time (in ms), or -1 if there is no media.
         '''
         return libvlc_media_player_get_time(self)
 
     
     def set_time(self, i_time):
-        '''Set the movie time (in ms). This has no effect if no media is being played.
+        '''Set the video time (in ms). This has no effect if no media is being played.
         Not all formats and protocols support this.
-        @param i_time: the movie time (in ms).
+        @param i_time: the video time (in ms).
         '''
         return libvlc_media_player_set_time(self, i_time)
 
     
     def get_position(self):
-        '''Get movie position as percentage between 0.0 and 1.0.
-        @return: movie position, or -1. in case of error.
+        '''Get video position as percentage between 0.0 and 1.0.
+        @return: video position, or -1. in case of error.
         '''
         return libvlc_media_player_get_position(self)
 
     
     def set_position(self, f_pos):
-        '''Set movie position as percentage between 0.0 and 1.0.
+        '''Set video position as percentage between 0.0 and 1.0.
         This has no effect if playback is not enabled.
         This might not work depending on the underlying input format and protocol.
         @param f_pos: the position.
@@ -2988,22 +2988,22 @@ class MediaPlayer(_Ctype):
 
     
     def set_chapter(self, i_chapter):
-        '''Set movie chapter (if applicable).
+        '''Set video chapter (if applicable).
         @param i_chapter: chapter number to play.
         '''
         return libvlc_media_player_set_chapter(self, i_chapter)
 
     
     def get_chapter(self):
-        '''Get movie chapter.
+        '''Get video chapter.
         @return: chapter number currently playing, or -1 if there is no media.
         '''
         return libvlc_media_player_get_chapter(self)
 
     
     def get_chapter_count(self):
-        '''Get movie chapter count.
-        @return: number of chapters in movie, or -1.
+        '''Get video chapter count.
+        @return: number of chapters in video, or -1.
         '''
         return libvlc_media_player_get_chapter_count(self)
 
@@ -3024,21 +3024,21 @@ class MediaPlayer(_Ctype):
 
     
     def set_title(self, i_title):
-        '''Set movie title.
+        '''Set video title.
         @param i_title: title number to play.
         '''
         return libvlc_media_player_set_title(self, i_title)
 
     
     def get_title(self):
-        '''Get movie title.
+        '''Get video title.
         @return: title number currently playing, or -1.
         '''
         return libvlc_media_player_get_title(self)
 
     
     def get_title_count(self):
-        '''Get movie title count.
+        '''Get video title count.
         @return: title number count, or -1.
         '''
         return libvlc_media_player_get_title_count(self)
@@ -3057,32 +3057,32 @@ class MediaPlayer(_Ctype):
 
     
     def get_rate(self):
-        '''Get the requested movie play rate.
+        '''Get the requested video play rate.
         @warning: Depending on the underlying media, the requested rate may be
         different from the real playback rate.
-        @return: movie play rate.
+        @return: video play rate.
         '''
         return libvlc_media_player_get_rate(self)
 
     
     def set_rate(self, rate):
-        '''Set movie play rate.
-        @param rate: movie play rate to set.
+        '''Set video play rate.
+        @param rate: video play rate to set.
         @return: -1 if an error was detected, 0 otherwise (but even then, it might not actually work depending on the underlying media protocol).
         '''
         return libvlc_media_player_set_rate(self, rate)
 
     
     def get_state(self):
-        '''Get current movie state.
+        '''Get current video state.
         @return: the current state of the media player (playing, paused, ...) See libvlc_state_t.
         '''
         return libvlc_media_player_get_state(self)
 
     
     def get_fps(self):
-        '''Get movie fps rate.
-        @return: frames per second (fps) for this playing movie, or 0 if unspecified.
+        '''Get video fps rate.
+        @return: frames per second (fps) for this playing video, or 0 if unspecified.
         '''
         return libvlc_media_player_get_fps(self)
 
@@ -5105,9 +5105,9 @@ def libvlc_audio_set_format(mp, format, rate, channels):
     return f(mp, format, rate, channels)
 
 def libvlc_media_player_get_length(p_mi):
-    '''Get the current movie length (in ms).
+    '''Get the current video length (in ms).
     @param p_mi: the Media Player.
-    @return: the movie length (in ms), or -1 if there is no media.
+    @return: the video length (in ms), or -1 if there is no media.
     '''
     f = _Cfunctions.get('libvlc_media_player_get_length', None) or \
         _Cfunction('libvlc_media_player_get_length', ((1,),), None,
@@ -5115,9 +5115,9 @@ def libvlc_media_player_get_length(p_mi):
     return f(p_mi)
 
 def libvlc_media_player_get_time(p_mi):
-    '''Get the current movie time (in ms).
+    '''Get the current video time (in ms).
     @param p_mi: the Media Player.
-    @return: the movie time (in ms), or -1 if there is no media.
+    @return: the video time (in ms), or -1 if there is no media.
     '''
     f = _Cfunctions.get('libvlc_media_player_get_time', None) or \
         _Cfunction('libvlc_media_player_get_time', ((1,),), None,
@@ -5125,10 +5125,10 @@ def libvlc_media_player_get_time(p_mi):
     return f(p_mi)
 
 def libvlc_media_player_set_time(p_mi, i_time):
-    '''Set the movie time (in ms). This has no effect if no media is being played.
+    '''Set the video time (in ms). This has no effect if no media is being played.
     Not all formats and protocols support this.
     @param p_mi: the Media Player.
-    @param i_time: the movie time (in ms).
+    @param i_time: the video time (in ms).
     '''
     f = _Cfunctions.get('libvlc_media_player_set_time', None) or \
         _Cfunction('libvlc_media_player_set_time', ((1,), (1,),), None,
@@ -5136,9 +5136,9 @@ def libvlc_media_player_set_time(p_mi, i_time):
     return f(p_mi, i_time)
 
 def libvlc_media_player_get_position(p_mi):
-    '''Get movie position as percentage between 0.0 and 1.0.
+    '''Get video position as percentage between 0.0 and 1.0.
     @param p_mi: the Media Player.
-    @return: movie position, or -1. in case of error.
+    @return: video position, or -1. in case of error.
     '''
     f = _Cfunctions.get('libvlc_media_player_get_position', None) or \
         _Cfunction('libvlc_media_player_get_position', ((1,),), None,
@@ -5146,7 +5146,7 @@ def libvlc_media_player_get_position(p_mi):
     return f(p_mi)
 
 def libvlc_media_player_set_position(p_mi, f_pos):
-    '''Set movie position as percentage between 0.0 and 1.0.
+    '''Set video position as percentage between 0.0 and 1.0.
     This has no effect if playback is not enabled.
     This might not work depending on the underlying input format and protocol.
     @param p_mi: the Media Player.
@@ -5158,7 +5158,7 @@ def libvlc_media_player_set_position(p_mi, f_pos):
     return f(p_mi, f_pos)
 
 def libvlc_media_player_set_chapter(p_mi, i_chapter):
-    '''Set movie chapter (if applicable).
+    '''Set video chapter (if applicable).
     @param p_mi: the Media Player.
     @param i_chapter: chapter number to play.
     '''
@@ -5168,7 +5168,7 @@ def libvlc_media_player_set_chapter(p_mi, i_chapter):
     return f(p_mi, i_chapter)
 
 def libvlc_media_player_get_chapter(p_mi):
-    '''Get movie chapter.
+    '''Get video chapter.
     @param p_mi: the Media Player.
     @return: chapter number currently playing, or -1 if there is no media.
     '''
@@ -5178,9 +5178,9 @@ def libvlc_media_player_get_chapter(p_mi):
     return f(p_mi)
 
 def libvlc_media_player_get_chapter_count(p_mi):
-    '''Get movie chapter count.
+    '''Get video chapter count.
     @param p_mi: the Media Player.
-    @return: number of chapters in movie, or -1.
+    @return: number of chapters in video, or -1.
     '''
     f = _Cfunctions.get('libvlc_media_player_get_chapter_count', None) or \
         _Cfunction('libvlc_media_player_get_chapter_count', ((1,),), None,
@@ -5209,7 +5209,7 @@ def libvlc_media_player_get_chapter_count_for_title(p_mi, i_title):
     return f(p_mi, i_title)
 
 def libvlc_media_player_set_title(p_mi, i_title):
-    '''Set movie title.
+    '''Set video title.
     @param p_mi: the Media Player.
     @param i_title: title number to play.
     '''
@@ -5219,7 +5219,7 @@ def libvlc_media_player_set_title(p_mi, i_title):
     return f(p_mi, i_title)
 
 def libvlc_media_player_get_title(p_mi):
-    '''Get movie title.
+    '''Get video title.
     @param p_mi: the Media Player.
     @return: title number currently playing, or -1.
     '''
@@ -5229,7 +5229,7 @@ def libvlc_media_player_get_title(p_mi):
     return f(p_mi)
 
 def libvlc_media_player_get_title_count(p_mi):
-    '''Get movie title count.
+    '''Get video title count.
     @param p_mi: the Media Player.
     @return: title number count, or -1.
     '''
@@ -5257,11 +5257,11 @@ def libvlc_media_player_next_chapter(p_mi):
     return f(p_mi)
 
 def libvlc_media_player_get_rate(p_mi):
-    '''Get the requested movie play rate.
+    '''Get the requested video play rate.
     @warning: Depending on the underlying media, the requested rate may be
     different from the real playback rate.
     @param p_mi: the Media Player.
-    @return: movie play rate.
+    @return: video play rate.
     '''
     f = _Cfunctions.get('libvlc_media_player_get_rate', None) or \
         _Cfunction('libvlc_media_player_get_rate', ((1,),), None,
@@ -5269,9 +5269,9 @@ def libvlc_media_player_get_rate(p_mi):
     return f(p_mi)
 
 def libvlc_media_player_set_rate(p_mi, rate):
-    '''Set movie play rate.
+    '''Set video play rate.
     @param p_mi: the Media Player.
-    @param rate: movie play rate to set.
+    @param rate: video play rate to set.
     @return: -1 if an error was detected, 0 otherwise (but even then, it might not actually work depending on the underlying media protocol).
     '''
     f = _Cfunctions.get('libvlc_media_player_set_rate', None) or \
@@ -5280,7 +5280,7 @@ def libvlc_media_player_set_rate(p_mi, rate):
     return f(p_mi, rate)
 
 def libvlc_media_player_get_state(p_mi):
-    '''Get current movie state.
+    '''Get current video state.
     @param p_mi: the Media Player.
     @return: the current state of the media player (playing, paused, ...) See libvlc_state_t.
     '''
@@ -5290,9 +5290,9 @@ def libvlc_media_player_get_state(p_mi):
     return f(p_mi)
 
 def libvlc_media_player_get_fps(p_mi):
-    '''Get movie fps rate.
+    '''Get video fps rate.
     @param p_mi: the Media Player.
-    @return: frames per second (fps) for this playing movie, or 0 if unspecified.
+    @return: frames per second (fps) for this playing video, or 0 if unspecified.
     '''
     f = _Cfunctions.get('libvlc_media_player_get_fps', None) or \
         _Cfunction('libvlc_media_player_get_fps', ((1,),), None,
@@ -6744,15 +6744,15 @@ if __name__ == '__main__':
 
     if sys.argv[1:] and sys.argv[1] not in ('-h', '--help'):
 
-        movie = os.path.expanduser(sys.argv[1])
-        if not os.access(movie, os.R_OK):
-            print('Error: %s file not readable' % movie)
+        video = os.path.expanduser(sys.argv[1])
+        if not os.access(video, os.R_OK):
+            print('Error: %s file not readable' % video)
             sys.exit(1)
 
         instance = Instance("--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq --verbose -1 ")
 #         --video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq --verbose -1 
         try:
-            media = instance.media_new(movie)
+            media = instance.media_new(video)
         except NameError:
             print('NameError: %s (%s vs LibVLC %s)' % (sys.exc_info()[1],
                                                        __version__,
@@ -6795,7 +6795,7 @@ if __name__ == '__main__':
 #         player.video_set_marquee_int(VideoMarqueeOption.Position, Position.BottomRight)
         if False:  # only one marquee can be specified
             player.video_set_marquee_int(VideoMarqueeOption.Timeout, 5000)  # millisec, 0==forever
-            t = media.get_mrl()  # movie
+            t = media.get_mrl()  # video
         else:  # update marquee text periodically
             player.video_set_marquee_int(VideoMarqueeOption.Timeout, 500)  # millisec, 0==forever
 #             player.video_set_marquee_int(VideoMarqueeOption.Refresh, -1)  # millisec (or sec?)
@@ -6860,7 +6860,7 @@ if __name__ == '__main__':
             for k, m in sorted(keybindings.items()):
                 m = (m.__doc__ or m.__name__).splitlines()[0]
                 print('  %s: %s.' % (k, m.rstrip('.')))
-            print('0-9: go to that fraction of the movie')
+            print('0-9: go to that fraction of the video')
 
         def quit_app():
             """Stop and exit"""
@@ -6893,7 +6893,7 @@ if __name__ == '__main__':
 #             if k in keybindings:
 #                 keybindings[k]()
 #             elif k.isdigit():
-#                  # jump to fraction of the movie.
+#                  # jump to fraction of the video.
 #                 player.set_position(float('0.'+k))
 
     else:

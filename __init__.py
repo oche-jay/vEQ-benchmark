@@ -3,6 +3,7 @@ Created on 24 Feb 2015
 
 @author: oche
 '''
+import argparse
 import os
 import sys
 import time
@@ -24,9 +25,8 @@ logging.getLogger().setLevel(logging.ERROR)
 logging.info("Started VEQ_Benchmark")
 
 verbosity = -1
-default_youtube_quality= '266'
-# duration to run benchmark or -1 for length of video
-bench_duration= 120
+default_youtube_quality= '137'
+benchmark_duration= 30 #or -1 for length of video
 
 # Available Formats for Youtube
 # format code  extension  resolution note
@@ -57,13 +57,119 @@ bench_duration= 120
 # 43           webm       640x360    
 # 18           mp4        640x360    
 # 22           mp4        1280x720   (best)
-
-
-
-#         move to a util or stats class
+def real_main(video):
+            if ("http" or "www") not in video and not (os.access(video, os.R_OK)):
+                print('Error: %s file not readable' % video)
+                logging.warning('Error: %s file not readable' % video)
+                sys.exit(1)
+    #         we might be able to gety some of this info form vlc herself although mediainfo tends to have much more info
+            try: 
+                if ("yout" or "goog") not in video: #this is weak, use a better regex to capture youtube or googlevideo urls
+                    logging.debug("Found regular video")  
+                    video_info = MediaInfo.parse(video)
+                    video_data = video_info.to_json()
+                    for track in video_info.tracks:
+                        if track.track_type == 'Video':
+                            video_codec = track.codec
+                            video_height = track.height
+                            video_width = track.width
+                elif ("yout"  in video):
+                    logging.debug("Found Youtube video: Using youtube-dl to get information")
+                    youtube_dl_opts = {
+                             'format' : default_youtube_quality,
+                             'quiet' : True
+                        }
+                    with YoutubeDL(youtube_dl_opts) as ydl:
+                        try:
+                            info_dict = ydl.extract_info(video, download=False)
+                            video = info_dict['url']
+                            video_data = str(json.dumps(info_dict)) #get json file from youtube dl or lua if possible
+                            video_codec = info_dict['format']
+                            video_height = info_dict['height']
+                            video_width = info_dict['width']
+                        except:
+                            error = sys.exc_info()
+                            logging.error("Unexpected error while retrieve details using Youtube-DL: " + str(error))
+                            video_codec, video_height, video_width = "Null",0,0
+    
+    #                 call youtube-dl for now
+                    
+            except:
+                error = sys.exc_info()
+                logging.error("Unexpected error: " + str(error))
+                video_data = str(error)
+                video_codec, video_height, video_width = "Null",0,0
+    
+    #       Write info to videoinfo database
+            """
+             values = [timestamp INT, name TEXT, specs TEXT, codec TEXT, width TEXT, height TEXT ]
+            """
+            video_values = [start_time,video,video_data,video_codec,video_width,video_height] 
+            video_index = vEQdb.insertIntoVideoInfoTable(video_values)
+            
+            vlcPlayback = vlc.VEQPlayback(video,vEQdb,vlc_args,meter)
+            vlcPlayback.play(benchmark_duration)
+        
+            end_time = time.time()
+          
+            
+            powers = vEQdb.getValuesFromPowerTable(start_time, end_time)
+            cpus = vEQdb.getCPUValuesFromPSTable(start_time, end_time)
+            memorys = vEQdb.getMemValuesFromPSTable(start_time, end_time)
+            net_r = vEQdb.getValuesFromPSTable("net_recv", start_time, end_time) 
+            data_xfer = net_r[-1] - net_r[0]
+            
+#             http://stackoverflow.com/questions/4029436/subtracting-the-current-and-previous-item-in-a-list
+# zip concats the items in two list at the same index as a tuple
+# so basically we concat the list with a slice of itself starting at index 1, and the use the comprehension to find the fdifference
+            bitrate =  [y - x for x,y in zip(net_r,net_r[1:])]
+            print bitrate
+        
+        
+            try:
+                p = numpy.array(cleanResults(powers))
+                c = numpy.array(cleanResults(cpus))
+                m = numpy.array(cleanResults(memorys))
+            except:
+                print "err"
+            
+            
+    #         write this to a summary file .eg json or html or a database
+            print "============================================="
+            print "vEQ-Summary"
+            print "============================================="
+            print "Video Name: " 
+            print "Benchmark Duration: " + str(end_time - start_time) + "secs"
+            print "Video Codec: " + video_codec
+            print "Width: " + str(video_width)  
+            print "Height: " + str(video_height)
+            print "Mean Power: " + str(p.mean()) + "W"
+            print "Mean CPU Usage: " + str(c.mean()) + "%"
+            print "Mean Memory Usage: " + str(m.mean()) + "%"
+            print "Mean Bandwidth: "+ "Not Implemented (TODO)"
+            print "Video Filesize " + "Not Implemented (TODO)"
+            print "Video Data Transferred " + str(float( data_xfer / (1024**2))) + " MB"
+            print "============================================="
+            print "System Information"
+            print "============================================="
+            print "O/S: " + os_info
+            print "CPU Name: " + cpu 
+            print "GPU Name: " + gpu
+            print "Memory Info: " + "Not Yet Implemented"
+            print "Disk Info: " + "Not Yet Implemented"
+            print "Active NIC Info: " + "Not Yet Implemented"
+            print "============================================="
+           
+            
+              
+     
+     # Cleanup
    
 if __name__ == '__main__':
-
+    
+    parser = argparse.ArgumentParser(description='vEQ-benchmark: A Benchmarking and Measurement Tool for Video')
+    parser.add_argument('video' , metavar='VIDEO' , nargs='+', help="A local file or URL(Youtube, Vimeo etc.) for the video to be benchamarked")
+    
     vlc_args = "--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq " + "--verbose " + str(verbosity)
     
     meter = VoltcraftMeter() #can inject dependency here i.e power meter or smc or bios or batterty
@@ -88,98 +194,10 @@ if __name__ == '__main__':
     
     if sys.argv[1:] and sys.argv[1] not in ('-h', '--help'):
 #         write to vid info db
-        movie = os.path.expanduser(sys.argv[1])
-        if ("http" or "www") not in movie and not (os.access(movie, os.R_OK)):
-            print('Error: %s file not readable' % movie)
-            logging.warning('Error: %s file not readable' % movie)
-            sys.exit(1)
-#         we might be able to gety some of this info form vlc herself although mediainfo tends to have much more info
-        try: 
-            if ("yout" or "goog") not in movie: #this is weak, use a better regex to capture youtube or googlevideo urls
-                logging.debug("Found regular movie")  
-                movie_info = MediaInfo.parse(movie)
-                movie_data = movie_info.to_json()
-                for track in movie_info.tracks:
-                    if track.track_type == 'Video':
-                        movie_codec = track.codec
-                        movie_height = track.height
-                        movie_width = track.width
-            elif ("yout"  in movie):
-                logging.debug("Found Youtube video: Using youtube-dl to get information")
-                youtube_dl_opts = {
-                         'format' : default_youtube_quality,
-                         'quiet' : True
-                    }
-                with YoutubeDL(youtube_dl_opts) as ydl:
-                    try:
-                        info_dict = ydl.extract_info(movie, download=False)
-                        movie = info_dict['url']
-                        movie_data = str(json.dumps(info_dict)) #get json file from youtube dl or lua if possible
-                        movie_codec = info_dict['format']
-                        movie_height = info_dict['height']
-                        movie_width = info_dict['width']
-                    except:
-                        error = sys.exc_info()
-                        logging.error("Unexpected error while retrieve details using Youtube-DL: " + str(error))
-                        movie_codec, movie_height, movie_width = "Null",0,0
-
-#                 call youtube-dl for now
-                
-        except:
-            error = sys.exc_info()
-            logging.error("Unexpected error: " + str(error))
-            movie_data = str(error)
-            movie_codec, movie_height, movie_width = "Null",0,0
-
-#       Write info to videoinfo database
-        """
-         values = [timestamp INT, name TEXT, specs TEXT, codec TEXT, width TEXT, height TEXT ]
-        """
-        video_values = [start_time,movie,movie_data,movie_codec,movie_width,movie_height] 
-        video_index = vEQdb.insertIntoVideoInfoTable(video_values)
+#         video = os.path.expanduser(sys.argv[1])
+        videos = parser.parse_args().video
         
-        vlcPlayback = vlc.VEQPlayback(movie,vEQdb,vlc_args,meter)
-        vlcPlayback.play(bench_duration)
-        end_time = time.time()
-        
-        powers = vEQdb.getValuesFromPowerTable(start_time, end_time)
-        cpus = vEQdb.getCPUValuesFromPSTable(start_time, end_time)
-        memorys = vEQdb.getMemValuesFromPSTable(start_time, end_time)
+        for video in videos:
+            real_main(video)
+  
     
-        try:
-            p = numpy.array(cleanResults(powers))
-            c = numpy.array(cleanResults(cpus))
-            m = numpy.array(cleanResults(memorys))
-        except:
-            print "err"
-        
-        
-#         write this to a summary file .eg json or html or a database
-        print "============================================="
-        print "vEQ-Summary"
-        print "============================================="
-        print "Video Name: " 
-        print "Benchmark Duration: " + str(end_time - start_time) + "secs"
-        print "Video Codec: " + movie_codec
-        print "Resolution: " + str(movie_width) + "x" + str(movie_height)
-        print "Mean Power: " + str(p.mean()) + "W"
-        print "Mean CPU Usage: " + str(c.mean()) + "%"
-        print "Mean Memory Usage: " + str(m.mean()) + "%"
-        print "Mean Bandwidth: "+ "Not Implemented (TODO)"
-        print "Video Filesize " + "Not Implemented (TODO)"
-        print "============================================="
-        print "System Information"
-        print "============================================="
-        print "O/S: " + os_info
-        print "CPU Name: " + cpu 
-        print "GPU Name: " + gpu
-        print "Memory Info: " + "Not Yet Implemented"
-        print "Active NIC Info: " + "Not Yet Implemented"
-        print "============================================="
-       
-        
-          
-        
-    else:
-        print('Usage: %s <movie_filename>' % sys.argv[0])
- # Cleanup
