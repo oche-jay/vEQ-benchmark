@@ -74,7 +74,8 @@ class  VEQPlayback:
         
         '''
         vlcApp = QtGui.QApplication(sys.argv)
-        vlcWidget = QtGui.QFrame()  
+        vlcWidget = QtGui.QFrame()
+       
         vlcWidget.setWindowTitle("vEQ_benchmark")  
 #         TODO: set window size here
         vlcWidget.show()
@@ -107,6 +108,15 @@ class  VEQPlayback:
         self.qThread.finished.connect(vlcApp.exit)
          
         player.play()
+        
+        window_size = player.video_get_size(0)
+        
+        print window_size
+        if window_size[0] and window_size[1] > 10:
+            logging.info("Setting window size to: " + str(window_size))
+            vlcWidget.resize(window_size[0],window_size[1])
+        elif True: #try to get the size from elsewhere
+            pass
 
         self.qThread.start()
         
@@ -142,8 +152,6 @@ class  VEQPlayback:
         '''
         self.duration = duration
         self.setupPlayback(self.player)
-     
-
 
     # Subclassing QObject and using moveToThread
     # http://blog.qt.digia.com/blog/2007/07/05/qthreads-no-longer-abstract
@@ -190,7 +198,6 @@ class  VEQPlayback:
                 io_read = vlcProcess.io_counters().read_bytes
                 io_write = vlcProcess.io_counters().write_bytes
                 
-      
                 power_val = self.meter.get_device_reading()
                 logging.debug("Got power measurement: " +  str(power_val))
                 power_v = float(power_val)
@@ -201,15 +208,13 @@ class  VEQPlayback:
                 sent_now = psutil.net_io_counters().bytes_sent
                 recv_now = psutil.net_io_counters().bytes_recv
                 
-                
-                    
                 values = [timestamp, cpu_val, mempercent_val, rss,sent_now, recv_now, io_read, io_write, sys_index_FK, video_index_FK]
                 powers = [timestamp,power_v,sys_index_FK, video_index_FK] 
                 self.db.insertIntoReadingsTable(values)
                 self.db.insertIntoPowerTable(powers)
                 
                 if count  >= self.duration and self.duration > 0:
-                    logging.debug("Benchmark duration completed...Exiting")
+                    logging.info("Benchmark duration completed...Exiting")
                     self.finished.emit()
                     break
                 time.sleep(1) 

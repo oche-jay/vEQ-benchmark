@@ -21,7 +21,7 @@ import videoInput.veqplayback as vlc
 from powermonitor.voltcraftmeter import VoltcraftMeter
 
 # TODO: Set logging level from argument
-logging.getLogger().setLevel(logging.ERROR)
+logging.getLogger().setLevel(logging.INFO)
 logging.info("Started VEQ_Benchmark")
 
 verbosity = -1
@@ -64,41 +64,45 @@ def real_main(video):
                 sys.exit(1)
     #         we might be able to gety some of this info form vlc herself although mediainfo tends to have much more info
             try: 
-                if ("yout" or "goog") not in video: #this is weak, use a better regex to capture youtube or googlevideo urls
+                if ("http" or "www") not in video: #this is weak, use a better regex to capture youtube or googlevideo urls
                     logging.debug("Found regular video")  
                     video_info = MediaInfo.parse(video)
                     video_data = video_info.to_json()
                     for track in video_info.tracks:
                         if track.track_type == 'Video':
+                            video_title = video.title
                             video_codec = track.codec
                             video_height = track.height
                             video_width = track.width
-                elif ("yout"  in video):
-                    logging.debug("Found Youtube video: Using youtube-dl to get information")
-                    youtube_dl_opts = {
-                             'format' : default_youtube_quality,
-                             'quiet' : True
-                        }
-                    with YoutubeDL(youtube_dl_opts) as ydl:
-                        try:
-                            info_dict = ydl.extract_info(video, download=False)
-                            video = info_dict['url']
-                            video_data = str(json.dumps(info_dict)) #get json file from youtube dl or lua if possible
-                            video_codec = info_dict['format']
-                            video_height = info_dict['height']
-                            video_width = info_dict['width']
-                        except:
-                            error = sys.exc_info()
-                            logging.error("Unexpected error while retrieve details using Youtube-DL: " + str(error))
-                            video_codec, video_height, video_width = "Null",0,0
-    
-    #                 call youtube-dl for now
+                elif ("http" or "www" in video):
+                    logging.debug("Found online video: Using youtube-dl to get information")
+                    if "yout" or "goog" in video:
+                        logging.debug("Found online video: Using youtube-dl to get information")
+                        youtube_dl_opts = {
+                                 'format' : default_youtube_quality,
+                                 'quiet' : True
+                            }
+                        with YoutubeDL(youtube_dl_opts) as ydl:
+                            try:
+                                info_dict = ydl.extract_info(video, download=False)
+                                video = info_dict['url']
+                                video_title = info_dict['title']
+                                video_data = str(json.dumps(info_dict)) #get json file from youtube dl or lua if possible
+                                video_codec = info_dict['format']
+                                video_height = info_dict['height']
+                                video_width = info_dict['width']
+                            except:
+                                error = sys.exc_info()
+                                logging.error("Unexpected error while retrieve details using Youtube-DL: " + str(error))
+                                video_codec, video_height, video_width = "Null",-1,-1
+        
+        #                 call youtube-dl for now
                     
             except:
                 error = sys.exc_info()
                 logging.error("Unexpected error: " + str(error))
                 video_data = str(error)
-                video_codec, video_height, video_width = "Null",0,0
+                video_codec, video_height, video_width = "Null",-1,-1
     
     #       Write info to videoinfo database
             """
@@ -134,11 +138,12 @@ def real_main(video):
                 print "err"
             
             
-    #         write this to a summary file .eg json or html or a database
+    #         write this to a summary file json and a database
             print "============================================="
             print "vEQ-Summary"
             print "============================================="
-            print "Video Name: " 
+            print "Video Name: " + video_title
+            print "Video URL: " + " "
             print "Benchmark Duration: " + str(end_time - start_time) + "secs"
             print "Video Codec: " + video_codec
             print "Width: " + str(video_width)  
@@ -199,5 +204,9 @@ if __name__ == '__main__':
         
         for video in videos:
             real_main(video)
+            
+    else:
+#         print usage
+        pass
   
     
