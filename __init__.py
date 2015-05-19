@@ -11,6 +11,7 @@ import logging
 import json
 import numpy
 
+
 try:
     from util.pymediainfo import MediaInfo
 except:
@@ -19,6 +20,7 @@ except:
 # //add youtube-dl to the python path
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)) , "youtube-dl"))
 # from util import cleanResults
+import util
 from youtube_dl import YoutubeDL
 import database.vEQ_database as DB
 import processmonitor.processMonitor as procmon
