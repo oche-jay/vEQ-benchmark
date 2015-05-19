@@ -81,7 +81,7 @@ class VoltcraftMeter():
                     logging.warning('Unable to open hid device')
                     return None
             else:
-                logging.error("Couldn't open device")
+                logging.error("Couldn't open Voltcraft device for reading")
                 return None
             
         except:

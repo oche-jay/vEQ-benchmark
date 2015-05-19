@@ -13,6 +13,7 @@ from PyQt4 import QtCore
 from PyQt4 import QtGui
 import powermonitor
 import logging
+from twisted import plugins
 
 
 class  VEQPlayback:
@@ -43,9 +44,17 @@ class  VEQPlayback:
          Setup and return a VLC Player 
          @param video: URL or File location for the video or video to be played 
         '''
-#         print 'Creating Player'
+#       
+#         for darwin, there is an issue with the vlc pluginpath since 2.2 I believe that should be dealt with
+#         ideally in code pr fixed in future release.
+#         Hot fix was to make a symbolic link between 
+#          /Applications/VLC.app/Contents/MacOS/lib/vlc/plugins and /Applications/VLC.app/Contents/MacOS/plugins
+#          the latter being where the actual plugins are 
         instance = vlc.Instance(args)
         
+        if instance  is None:
+            logging.error("Media Player Instance not created")
+            sys.exit(-1)
 #       Need to create a MediaListPlayer and add videos to the playlist. This 
 #       is the only way to play back Youtube.
         try:
@@ -195,12 +204,27 @@ class  VEQPlayback:
                 mempercent_val = vlcProcess.memory_percent()
                 mem_val = vlcProcess.memory_info()
                 rss =  mem_val.rss
-                io_read = vlcProcess.io_counters().read_bytes
-                io_write = vlcProcess.io_counters().write_bytes
+                if sys.platform.startswith("darwin"):
+#                     as theres no way to capture this  on bsd unix apparently #
+                    io_read = -1
+                    io_write = -1
+                else:
+                    io_read = vlcProcess.io_counters().read_bytes
+                    io_write = vlcProcess.io_counters().write_bytes
                 
+<<<<<<< HEAD
                 power_val = self.meter.get_device_reading()
                 logging.debug("Got power measurement: " +  str(power_val))
                 power_v = float(power_val)
+=======
+                if self.meter is not None:
+                    power_val = self.meter.get_device_reading()
+                    logging.debug("Got power measurement: " +  str(power_val))
+                    power_v = float(power_val)
+                else:
+                    power_val = -1
+                    power_v = -1
+>>>>>>> branch 'master' of https://github.com/oche-jay/vEQ-benchmark.git
                 
                 marq_str = str.format("CPU: %3.1f%%%%\nMEM: %3.1f%%%%\nPOWR: %3.1fW\n" % (cpu_val,mempercent_val,power_val)) #need to escape %% twice
                 player.video_set_marquee_string(vlc.VideoMarqueeOption.Text, marq_str)
