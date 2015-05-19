@@ -12,7 +12,7 @@ import traceback
 import time
 import logging
 
-PROFILE = True
+PROFILE = False
 PROFILE_DURATION = 0 # (20 takes about 1 sec)
 BAUD_SPEED = int(9600)
 
@@ -101,7 +101,7 @@ class VoltcraftMeter():
         count = 0
     # TODO move this loop to end_time
         if self.hid_device is not None:
-            while count < 80:     #if count gets to 80 then maybe the device isnt on, return nothing so that caller doesnt wait longer than necessaru
+            while count < 120:     #if count gets to 120 then maybe the device isnt on, return nothing so that caller doesnt wait longer than necessaru
                 res = 0;
                 while (res == 0):
                     res = self.hid_device.read(256);
@@ -140,7 +140,7 @@ class VoltcraftMeter():
         vc_function = outputstring[0:2]
         measurement1 = outputstring[3:8]
         measurement2 = outputstring[9:14]
-        logging.debug("VC Fucntion: " + vc_function + "Measuremnt: " + measurement1)
+        logging.debug("VC Function: " + vc_function + "Measurement: " + measurement1)
         try:
             if vc_function == "90":
                 
