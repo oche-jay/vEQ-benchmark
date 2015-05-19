@@ -1,6 +1,6 @@
 pyqt4
 pymediainfo
 psutil
-hidapi
-youtube-dl
+cython
+hidapi #hidapi depends on cython
 numpy

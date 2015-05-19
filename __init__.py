@@ -11,9 +11,14 @@ import logging
 import json
 import numpy
 
-from util.pymediainfo import MediaInfo
+try:
+    from util.pymediainfo import MediaInfo
+except:
+    from pymediainfo import MediaInfo    
 
-from util import cleanResults
+# //add youtube-dl to the python path
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)) , "youtube-dl"))
+# from util import cleanResults
 from youtube_dl import YoutubeDL
 import database.vEQ_database as DB
 import processmonitor.processMonitor as procmon
@@ -21,7 +26,7 @@ import videoInput.veqplayback as vlc
 from powermonitor.voltcraftmeter import VoltcraftMeter
 
 # TODO: Set logging level from argument
-logging.getLogger().setLevel(logging.ERROR)
+logging.getLogger().setLevel(logging.DEBUG)
 logging.info("Started VEQ_Benchmark")
 
 verbosity = -1
@@ -168,15 +173,19 @@ def real_main(video):
 if __name__ == '__main__':
     
     parser = argparse.ArgumentParser(description='vEQ-benchmark: A Benchmarking and Measurement Tool for Video')
-    parser.add_argument('video' , metavar='VIDEO' , nargs='+', help="A local file or URL(Youtube, Vimeo etc.) for the video to be benchamarked")
+    parser.add_argument('video' , metavar='VIDEO' , nargs='+', help="A local file or URL(Youtube, Vimeo etc.) for the video to be benchmarked")
     
     vlc_args = "--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq " + "--verbose " + str(verbosity)
-    
+ 
+#     make voltcraftmeter and any other meters callable somehow
     meter = VoltcraftMeter() #can inject dependency here i.e power meter or smc or bios or batterty
-    
+    meter = None
 #     TODO: move this elsewherse since meter will not always be there
-    if meter.initDevice() is None:
-        logging.warning("device wasn't opened") #some kind of polymoprphism is needed here so that meter can be any type of device
+    if meter is None:
+        logging.warning("device wasn't fouund") #some kind of polymoprphism is needed here so that meter can be any type of device
+    elif meter.initDevice()  is None:
+        logging.warning("device wasn't fouund") 
+    
     
     vEQdb = DB.vEQ_database()
     vEQdb.initDB()
