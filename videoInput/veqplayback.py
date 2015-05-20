@@ -84,6 +84,7 @@ class  VEQPlayback:
         '''
         vlcApp = QtGui.QApplication(sys.argv)
         vlcWidget = QtGui.QFrame()  
+        
         vlcWidget.setWindowTitle("vEQ_benchmark")  
 #         TODO: set window size here
         vlcWidget.show()
@@ -100,9 +101,7 @@ class  VEQPlayback:
             # for Linux using the X Server
             player.set_xwindow(vlcWidget.winId())
             self.has_own_widget = True
-         
-        
-        
+
     #   Shift the communication with the UI to another QThread called obJThread
         self.qThread = QtCore.QThread()
         qobjectformainloop = self.QObjectThreadforMainLoop(self,self.db,self.meter,self.duration) #create the thread handler thing and move it to the new qhtread created
@@ -114,11 +113,9 @@ class  VEQPlayback:
         self.qThread.started.connect(qobjectformainloop.longRunning)
     #   this gets called when when the finished signal is emmited by thread or somethingf
         self.qThread.finished.connect(vlcApp.exit)
-         
         player.play()
-
         self.qThread.start()
-        
+
 #         loop to play video bck ?
         self.cleanExit(vlcApp.exec_())
         
@@ -151,8 +148,6 @@ class  VEQPlayback:
         '''
         self.duration = duration
         self.setupPlayback(self.player)
-     
-
 
     # Subclassing QObject and using moveToThread
     # http://blog.qt.digia.com/blog/2007/07/05/qthreads-no-longer-abstract
@@ -166,8 +161,7 @@ class  VEQPlayback:
             self.db = db
             self.meter = meter
             self.duration = duration
-            
-    
+
         '''
         This method is the "longrunning" thread that handles data collection  for the videeo playback process in a seperate thread
         '''
@@ -204,6 +198,11 @@ class  VEQPlayback:
                     io_read = vlcProcess.io_counters().read_bytes
                     io_write = vlcProcess.io_counters().write_bytes
                 
+# <<<<<<< HEAD
+                power_val = self.meter.get_device_reading()
+                logging.debug("Got power measurement: " +  str(power_val))
+                power_v = float(power_val)
+# =======
                 if self.meter is not None:
                     power_val = self.meter.get_device_reading()
                     logging.debug("Got power measurement: " +  str(power_val))
@@ -211,22 +210,21 @@ class  VEQPlayback:
                 else:
                     power_val = -1
                     power_v = -1
+# >>>>>>> branch 'master' of https://github.com/oche-jay/vEQ-benchmark.git
                 
                 marq_str = str.format("CPU: %3.1f%%%%\nMEM: %3.1f%%%%\nPOWR: %3.1fW\n" % (cpu_val,mempercent_val,power_val)) #need to escape %% twice
                 player.video_set_marquee_string(vlc.VideoMarqueeOption.Text, marq_str)
 # 
                 sent_now = psutil.net_io_counters().bytes_sent
                 recv_now = psutil.net_io_counters().bytes_recv
-                
-                
-                    
+       
                 values = [timestamp, cpu_val, mempercent_val, rss,sent_now, recv_now, io_read, io_write, sys_index_FK, video_index_FK]
                 powers = [timestamp,power_v,sys_index_FK, video_index_FK] 
                 self.db.insertIntoReadingsTable(values)
                 self.db.insertIntoPowerTable(powers)
                 
                 if count  >= self.duration and self.duration > 0:
-                    logging.debug("Benchmark duration completed...Exiting")
+                    logging.info("Benchmark duration completed...Exiting")
                     self.finished.emit()
                     break
                 time.sleep(1) 
