@@ -83,7 +83,8 @@ class  VEQPlayback:
         
         '''
         vlcApp = QtGui.QApplication(sys.argv)
-        vlcWidget = QtGui.QFrame()  
+        vlcWidget = QtGui.QFrame()
+       
         
         vlcWidget.setWindowTitle("vEQ_benchmark")  
 #         TODO: set window size here
@@ -115,6 +116,15 @@ class  VEQPlayback:
         self.qThread.finished.connect(vlcApp.exit)
         player.play()
         self.qThread.start()
+        
+        window_size = player.video_get_size(0)
+        
+        print window_size
+        if window_size[0] and window_size[1] > 10:
+            logging.info("Setting window size to: " + str(window_size))
+            vlcWidget.resize(window_size[0],window_size[1])
+        elif True: #try to get the size from elsewhere
+            pass
 
 #         loop to play video bck ?
         self.cleanExit(vlcApp.exec_())
@@ -148,7 +158,6 @@ class  VEQPlayback:
         '''
         self.duration = duration
         self.setupPlayback(self.player)
-
     # Subclassing QObject and using moveToThread
     # http://blog.qt.digia.com/blog/2007/07/05/qthreads-no-longer-abstract
     # http://stackoverflow.com/questions/6783194/background-thread-with-qthread-in-pyqt
