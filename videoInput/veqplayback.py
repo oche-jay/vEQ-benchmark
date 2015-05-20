@@ -157,6 +157,7 @@ class  VEQPlayback:
         '''
         self.duration = duration
         self.setupPlayback(self.player)
+        
     # Subclassing QObject and using moveToThread
     # http://blog.qt.digia.com/blog/2007/07/05/qthreads-no-longer-abstract
     # http://stackoverflow.com/questions/6783194/background-thread-with-qthread-in-pyqt
@@ -206,7 +207,7 @@ class  VEQPlayback:
                     io_read = vlcProcess.io_counters().read_bytes
                     io_write = vlcProcess.io_counters().write_bytes
                 
-# <<<<<<< HEAD
+ #<<<<<<< HEAD
                 power_val = self.meter.get_device_reading()
                 logging.debug("Got power measurement: " +  str(power_val))
                 power_v = float(power_val)
