@@ -18,7 +18,7 @@ except:
 
 # //add youtube-dl to the python path
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)) , "youtube-dl"))
-# from util import cleanResults
+from util import cleanResults
 from youtube_dl import YoutubeDL
 import database.vEQ_database as DB
 import processmonitor.processMonitor as procmon
@@ -26,16 +26,17 @@ import videoInput.veqplayback as vlc
 from powermonitor.voltcraftmeter import VoltcraftMeter
 
 # TODO: Set logging level from argument
-<<<<<<< HEAD
+# <<<<<<< HEAD
 logging.getLogger().setLevel(logging.INFO)
-=======
-logging.getLogger().setLevel(logging.DEBUG)
->>>>>>> branch 'master' of https://github.com/oche-jay/vEQ-benchmark.git
+# =======
+logging.getLogger().setLevel(logging.INFO)
+# >>>>>>> branch 'master' of https://github.com/oche-jay/vEQ-benchmark.git
 logging.info("Started VEQ_Benchmark")
 
+online_video = False
 verbosity = -1
 default_youtube_quality= '137'
-benchmark_duration= 30 #or -1 for length of video
+benchmark_duration= -1 #or -1 for length of video
 
 # Available Formats for Youtube
 # format code  extension  resolution note
@@ -84,6 +85,7 @@ def real_main(video):
                             video_height = track.height
                             video_width = track.width
                 elif ("http" or "www" in video):
+                    online_video = True
                     logging.debug("Found online video: Using youtube-dl to get information")
                     if "yout" or "goog" in video:
                         logging.debug("Found online video: Using youtube-dl to get information")
@@ -152,7 +154,8 @@ def real_main(video):
             print "vEQ-Summary"
             print "============================================="
             print "Video Name: " + video_title
-            print "Video URL: " + " "
+            if online_video:
+                print "Video URL: " + video
             print "Benchmark Duration: " + str(end_time - start_time) + "secs"
             print "Video Codec: " + video_codec
             print "Width: " + str(video_width)  
@@ -173,11 +176,7 @@ def real_main(video):
             print "Disk Info: " + "Not Yet Implemented"
             print "Active NIC Info: " + "Not Yet Implemented"
             print "============================================="
-           
-            
-              
-     
-     # Cleanup
+
    
 if __name__ == '__main__':
     
@@ -188,10 +187,13 @@ if __name__ == '__main__':
  
 #     make voltcraftmeter and any other meters callable somehow
     meter = VoltcraftMeter() #can inject dependency here i.e power meter or smc or bios or batterty
-    meter = None
-#     TODO: move this elsewherse since meter will not always be there
+    
+#     meter_type = parser.parse_args().meter
+#     meter = Meter(meter_type)
+#     
+    
     if meter is None:
-        logging.warning("device wasn't fouund") #some kind of polymoprphism is needed here so that meter can be any type of device
+        logging.warning("device wasn't fouund") 
     elif meter.initDevice()  is None:
         logging.warning("device wasn't fouund") 
     
