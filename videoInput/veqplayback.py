@@ -85,7 +85,6 @@ class  VEQPlayback:
         vlcApp = QtGui.QApplication(sys.argv)
         vlcWidget = QtGui.QFrame()
        
-        
         vlcWidget.setWindowTitle("vEQ_benchmark")  
 #         TODO: set window size here
         vlcWidget.show()
