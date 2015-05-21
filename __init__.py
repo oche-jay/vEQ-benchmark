@@ -10,6 +10,9 @@ import time
 import logging
 import json
 import numpy
+from decimal import *
+getcontext().prec = 3
+
 
 try:
     from util.pymediainfo import MediaInfo
@@ -24,19 +27,14 @@ import database.vEQ_database as DB
 import processmonitor.processMonitor as procmon
 import videoInput.veqplayback as vlc
 from powermonitor.voltcraftmeter import VoltcraftMeter
-
 # TODO: Set logging level from argument
-# <<<<<<< HEAD
-logging.getLogger().setLevel(logging.INFO)
-# =======
-logging.getLogger().setLevel(logging.INFO)
-# >>>>>>> branch 'master' of https://github.com/oche-jay/vEQ-benchmark.git
-logging.info("Started VEQ_Benchmark")
 
 online_video = False
 verbosity = -1
 default_youtube_quality= '137'
-benchmark_duration= -1 #or -1 for length of video
+benchmark_duration= 30 #or -1 for length of video
+meter = None
+
 
 # Available Formats for Youtube
 # format code  extension  resolution note
@@ -67,20 +65,21 @@ benchmark_duration= -1 #or -1 for length of video
 # 43           webm       640x360    
 # 18           mp4        640x360    
 # 22           mp4        1280x720   (best)
+
 def real_main(video):
             if ("http" or "www") not in video and not (os.access(video, os.R_OK)):
                 print('Error: %s file not readable' % video)
-                logging.warning('Error: %s file not readable' % video)
+                logging.error('Error: %s file not readable' % video)
                 sys.exit(1)
-    #         we might be able to gety some of this info form vlc herself although mediainfo tends to have much more info
             try: 
-                if ("http" or "www") not in video: #this is weak, use a better regex to capture youtube or googlevideo urls
+                if ("http" or "www") not in video: 
                     logging.debug("Found regular video")  
+                    video_url = video
                     video_info = MediaInfo.parse(video)
                     video_data = video_info.to_json()
                     for track in video_info.tracks:
                         if track.track_type == 'Video':
-                            video_title = video.title
+                            video_title = track.title
                             video_codec = track.codec
                             video_height = track.height
                             video_width = track.width
@@ -98,16 +97,17 @@ def real_main(video):
                                 info_dict = ydl.extract_info(video, download=False)
                                 video = info_dict['url']
                                 video_title = info_dict['title']
-                                video_data = str(json.dumps(info_dict)) #get json file from youtube dl or lua if possible
+                                video_data = str(json.dumps(info_dict)) 
                                 video_codec = info_dict['format']
                                 video_height = info_dict['height']
                                 video_width = info_dict['width']
+                                file_size = info_dict.get('filesize', "None")
+                                video_url = video
                             except:
                                 error = sys.exc_info()
                                 logging.error("Unexpected error while retrieve details using Youtube-DL: " + str(error))
                                 video_codec, video_height, video_width = "Null",-1,-1
         
-        #                 call youtube-dl for now
                     
             except:
                 error = sys.exc_info()
@@ -127,12 +127,13 @@ def real_main(video):
         
             end_time = time.time()
           
+            real_duration = end_time - start_time
             
             powers = vEQdb.getValuesFromPowerTable(start_time, end_time)
             cpus = vEQdb.getCPUValuesFromPSTable(start_time, end_time)
             memorys = vEQdb.getMemValuesFromPSTable(start_time, end_time)
             net_r = vEQdb.getValuesFromPSTable("net_recv", start_time, end_time) 
-            data_xfer = net_r[-1] - net_r[0]
+            data_transferred = net_r[-1] - net_r[0]
             
 #             http://stackoverflow.com/questions/4029436/subtracting-the-current-and-previous-item-in-a-list
 # zip concats the items in two list at the same index as a tuple
@@ -140,16 +141,34 @@ def real_main(video):
             bitrate =  [y - x for x,y in zip(net_r,net_r[1:])]
             print bitrate
         
+            def getmean(numpy_array):
+                try:
+                    return numpy_array.mean()
+                except:
+                    logging.error(sys.exc_info()[1])
+                    return "N/A"
         
-            try:
-                p = numpy.array(cleanResults(powers))
-                c = numpy.array(cleanResults(cpus))
-                m = numpy.array(cleanResults(memorys))
-            except:
-                print "err"
+        
+            p = numpy.array(powers)
+            c = numpy.array(cpus)
+            m = numpy.array(memorys)
             
+            mean_power = getmean(p)
+            mean_cpu =  getmean(c)
+            mean_memory = getmean(m)
+            mean_gpu = -1 #TODO: IMplement GPU 
+            mean_bandwidth = str(Decimal(data_transferred * 8) / Decimal(1000000* real_duration))
+
+            video_values = [start_time,video,video_data,video_codec,video_width,video_height] 
+            summary_keys = ("video_name" , "video_url", "video_codec", "video_height", "video_width", "mean_power", "mean_cpu", "mean_memory", "mean_gpu" , "mean_bandwidth" ,"data_transferred", "file_size", "sys_info_FK", "video_info_FK")
+            summary_values = (video_title, video_url , video_codec, video_height, video_width, mean_power, mean_cpu,
+                              mean_memory, mean_gpu , mean_bandwidth ,data_transferred, file_size, sys_info_index, video_index)
+   
+            summary_dict = dict(zip(summary_keys, summary_values))
+            print summary_dict
             
-    #         write this to a summary file json and a database
+            vEQdb.insertIntoVEQSummaryTable(summary_values)
+#         write this to a summary file json and a database
             print "============================================="
             print "vEQ-Summary"
             print "============================================="
@@ -163,9 +182,11 @@ def real_main(video):
             print "Mean Power: " + str(p.mean()) + "W"
             print "Mean CPU Usage: " + str(c.mean()) + "%"
             print "Mean Memory Usage: " + str(m.mean()) + "%"
-            print "Mean Bandwidth: "+ "Not Implemented (TODO)"
+          
             print "Video Filesize " + "Not Implemented (TODO)"
-            print "Video Data Transferred " + str(float( data_xfer / (1024**2))) + " MB"
+            if online_video:
+                print "Mean Bandwidth: "+ "Not Implemented (TODO)"
+                print "Video Data Transferred " + str(float( data_transferred / (1024**2))) + " MB"
             print "============================================="
             print "System Information"
             print "============================================="
@@ -179,12 +200,25 @@ def real_main(video):
 
    
 if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser(description="vEQ-benchmark: A Benchmarking and Measurement Tool for Video")
+    parser.add_argument("video" , metavar="VIDEO", help="A local file or URL(Youtube, Vimeo etc.) for the video to be benchmarked")
+    parser.add_argument("-y" , "--youtube-format", metavar="format", dest="default_youtube_quality", help="For Youtube videos, a value that corressponds to the quality level see youtube-dl for details")
+    parser.add_argument("-p" , "--power-meter", metavar="meter", dest="meter", help="The meter to use for power measurement TODO: Expand this")
+    parser.add_argument("-d", "--duration", metavar="Duration", dest="benchmark_duration", default=benchmark_duration, type=int, help="The length of time in seconds for the benchmark to run.")
+#     
+    args = parser.parse_args()
     
-    parser = argparse.ArgumentParser(description='vEQ-benchmark: A Benchmarking and Measurement Tool for Video')
-    parser.add_argument('video' , metavar='VIDEO' , nargs='+', help="A local file or URL(Youtube, Vimeo etc.) for the video to be benchmarked")
-    
-    vlc_args = "--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq " + "--verbose " + str(verbosity)
+    video = args.video
+    benchmark_duration = args.benchmark_duration
  
+ 
+    vlc_args = "--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq " + "--verbose " + str(verbosity)
+    
+    logging.getLogger().setLevel(logging.INFO)
+
+    logging.info("Started VEQ_Benchmark")
+
 #     make voltcraftmeter and any other meters callable somehow
     meter = VoltcraftMeter() #can inject dependency here i.e power meter or smc or bios or batterty
     
@@ -193,9 +227,9 @@ if __name__ == '__main__':
 #     
     
     if meter is None:
-        logging.warning("device wasn't fouund") 
+        logging.warning("device wasn't found") 
     elif meter.initDevice()  is None:
-        logging.warning("device wasn't fouund") 
+        logging.warning("device wasn't found") 
     
     
     vEQdb = DB.vEQ_database()
@@ -210,18 +244,18 @@ if __name__ == '__main__':
     values = [start_time,os_info,cpu, gpu,specs]
     
 #     write system information to database
-    vEQdb.insertIntoSysInfoTable(values)
+    sys_info_index = vEQdb.insertIntoSysInfoTable(values)
     
-    if sys.argv[1:] and sys.argv[1] not in ('-h', '--help'):
-#         write to vid info db
-#         video = os.path.expanduser(sys.argv[1])
-        videos = parser.parse_args().video
-        
-        for video in videos:
-            real_main(video)
+#     TODO: Add the functionality to monitor GPUs with nvidia-smi,  intel-gpu-tools and others
+
+#     if sys.argv[1:] and sys.argv[1] not in ('-h', '--help'):
+# #         write to vid info db
+# #         video = os.path.expanduser(sys.argv[1])
+#        
+    real_main(video)
             
-    else:
-#         print usage
-        pass
+#     else:
+# #         print usage
+#         pass
   
     

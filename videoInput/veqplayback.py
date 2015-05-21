@@ -13,8 +13,6 @@ from PyQt4 import QtCore
 from PyQt4 import QtGui
 import powermonitor
 import logging
-from twisted import plugins
-
 
 class  VEQPlayback:
     '''
@@ -35,6 +33,9 @@ class  VEQPlayback:
         self.db = db
         self.meter = meter
         self.duration = None
+        self.resize = False
+        self.vlcWidget = None
+        self.playstart_time = 0
     
     def end_callback(self, event):
         self.cleanExit(0)
@@ -45,18 +46,19 @@ class  VEQPlayback:
          @param video: URL or File location for the video or video to be played 
         '''
 #       
-#         for darwin, there is an issue with the vlc pluginpath since 2.2 I believe that should be dealt with
-#         ideally in code pr fixed in future release.
+#         For darwin, there is an issue with the vlc pluginpath since 2.2 I believe that should be dealt with
+#         ideally in code or fixed by Videolan Developers in a future release.
 #         Hot fix was to make a symbolic link between 
 #          /Applications/VLC.app/Contents/MacOS/lib/vlc/plugins and /Applications/VLC.app/Contents/MacOS/plugins
-#          the latter being where the actual plugins are 
+#          the latter being where the actual plugins are, the former being where VLC thinks they are
+ 
         instance = vlc.Instance(args)
         
         if instance  is None:
             logging.error("Media Player Instance not created")
             sys.exit(-1)
 #       Need to create a MediaListPlayer and add videos to the playlist. This 
-#       is the only way to play back Youtube.
+#       appears to be the only way to play back Youtube videos.
         try:
             media = instance.media_new(video) 
             media_list = instance.media_list_new([video]) #a list of one video
@@ -83,23 +85,23 @@ class  VEQPlayback:
         
         '''
         vlcApp = QtGui.QApplication(sys.argv)
-        vlcWidget = QtGui.QFrame()
+        self.vlcWidget = QtGui.QFrame()
        
-        vlcWidget.setWindowTitle("vEQ_benchmark")  
+        self.vlcWidget.setWindowTitle("vEQ_benchmark")  
 #         TODO: set window size here
-        vlcWidget.show()
-#         vlcWidget.raise_()
+        self.vlcWidget.show()
+        self.vlcWidget.raise_()
         
         if sys.platform == "win32":
-            player.set_hwnd(vlcWidget.winId())
+            player.set_hwnd(self.vlcWidget.winId())
         elif sys.platform == "darwin":
             # We have to use 'set_nsobject' since Qt4 on OSX uses Cocoa
             # framework and not the old Carbon.
-            player.set_nsobject(vlcWidget.winId())
+            player.set_nsobject(self.vlcWidget.winId())
 #             display.vlcMediaPlayer.set_nsobject(win_id)
         else:
             # for Linux using the X Server
-            player.set_xwindow(vlcWidget.winId())
+            player.set_xwindow(self.vlcWidget.winId())
             self.has_own_widget = True
 
     #   Shift the communication with the UI to another QThread called obJThread
@@ -115,17 +117,18 @@ class  VEQPlayback:
         self.qThread.finished.connect(vlcApp.exit)
         player.play()
         self.qThread.start()
+
+        
+        self.playstart_time = time.time()
         
         window_size = player.video_get_size(0)
-        
-        print window_size
         if window_size[0] and window_size[1] > 10:
             logging.info("Setting window size to: " + str(window_size))
-            vlcWidget.resize(window_size[0],window_size[1])
-        elif True: #try to get the size from elsewhere
+            self.vlcWidget.resize(window_size[0],window_size[1])
+            self.resize = True
+        elif True: #TODO: try to get the size from elsewhere
             pass
 
-#         loop to play video bck ?
         self.cleanExit(vlcApp.exec_())
         
     
@@ -134,22 +137,21 @@ class  VEQPlayback:
            
         
     def print_info(self,player):
-       """Print information about the media"""
-       try:
-           media = player.get_media()
-           print('State: %s' % player.get_state())
-           print('Media: %s' % vlc.bytes_to_str(media.get_mrl()))
-           print('Track: %s/%s' % (player.video_get_track(), player.video_get_track_count()))
-           print('Current time: %s/%s' % (player.get_time(), media.get_duration()))
-           print('Position: %s' % player.get_position())
-           print('FPS: %s (%d ms)' % (player.get_fps(), int(1000 // (player.get_fps() or 25))))
-           print('Rate: %s' % player.get_rate())
-           print('Video size: %s' % str(player.video_get_size(0)))  # num=0
-           print('Scale: %s' % player.video_get_scale())
-           print('Aspect ratio: %s' % player.video_get_aspect_ratio())
-          #print('Window:' % player.get_hwnd()
-       except Exception:
-           print('Error: %s' % sys.exc_info()[1])
+        """Print information about the media"""
+        try:
+            media = player.get_media()
+            print('State: %s' % player.get_state())
+            print('Media: %s' % vlc.bytes_to_str(media.get_mrl()))
+            print('Position: %s' % player.get_position())
+            print('FPS: %s (%d ms)' % (player.get_fps(), int(1000 // (player.get_fps() or 25))))
+            print('Rate: %s' % player.get_rate())
+            print('Video size: %s' % str(player.video_get_size(0)))  # num=0
+            print('Scale: %s' % player.video_get_scale())
+            print('Aspect ratio: %s' % player.video_get_aspect_ratio())
+            #print('Window:' % player.get_hwnd()
+            
+        except Exception:
+            print('Error: %s' % sys.exc_info()[1])
            
     def play(self,duration):
         '''
@@ -170,7 +172,6 @@ class  VEQPlayback:
             self.db = db
             self.meter = meter
             self.duration = duration
-
         '''
         This method is the "longrunning" thread that handles data collection  for the videeo playback process in a seperate thread
         '''
@@ -188,30 +189,48 @@ class  VEQPlayback:
             player.video_set_marquee_int(vlc.VideoMarqueeOption.Size, 50)  # pixels
             player.video_set_marquee_int(vlc.VideoMarqueeOption.Position, vlc.Position.TopRight)
             
+
+            if self.vlc_playback_object.resize is False:
+                window_size = player.video_get_size(0)
+                if window_size[0] and window_size[1] > 10:
+                    logging.info("Setting window size to: " + str(window_size))
+                    self.vlc_playback_object.vlcWidget.resize(window_size[0],window_size[1])
+                    self.vlc_playback_object.resize = True
+#                 try to resize
+            
             sent = psutil.net_io_counters().bytes_sent
             recv = psutil.net_io_counters().bytes_recv
             
+#             TODO: Profile why this look takes a whole second to complete
             while True:
                 count += 1
-#               perhaps move this to the process monitor class or nah?
+                
+                #                 try to resize the playback window
+                if self.vlc_playback_object.resize is False:
+                    window_size = player.video_get_size(0)
+                    if window_size[0] and window_size[1] > 10:
+                        logging.info("Setting window size to: " + str(window_size))
+                        self.vlc_playback_object.vlcWidget.resize(window_size[0],window_size[1])
+                        self.vlc_playback_object.resize = True
+
                 timestamp = time.time()
                 cpu_val = vlcProcess.cpu_percent()
                 mempercent_val = vlcProcess.memory_percent()
                 mem_val = vlcProcess.memory_info()
                 rss =  mem_val.rss
                 if sys.platform.startswith("darwin"):
-#                     as theres no way to capture this  on bsd unix apparently #
+#               Theres no way to capture this  on bsd unix apparently #
                     io_read = -1
                     io_write = -1
                 else:
                     io_read = vlcProcess.io_counters().read_bytes
                     io_write = vlcProcess.io_counters().write_bytes
                 
- #<<<<<<< HEAD
+                
                 power_val = self.meter.get_device_reading()
                 logging.debug("Got power measurement: " +  str(power_val))
                 power_v = float(power_val)
-# =======
+
                 if self.meter is not None:
                     power_val = self.meter.get_device_reading()
                     logging.debug("Got power measurement: " +  str(power_val))
@@ -232,11 +251,14 @@ class  VEQPlayback:
                 self.db.insertIntoReadingsTable(values)
                 self.db.insertIntoPowerTable(powers)
                 
-                if count  >= self.duration and self.duration > 0:
+                elapsed = timestamp - self.vlc_playback_object.playstart_time
+                logging.info("Time elapsed: " + str(elapsed))
+                if self.duration > 0 and elapsed  >= self.duration:
                     logging.info("Benchmark duration completed...Exiting")
                     self.finished.emit()
                     break
-                time.sleep(1) 
+                
+                time.sleep(1) #TODO: set this to a polling interval that can be set in args
             
 #                     print_info(self.player)   
             def emitFinished():

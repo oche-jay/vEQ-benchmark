@@ -49,6 +49,24 @@ class vEQ_database(object):
                            "FOREIGN KEY (sys_info_FK) REFERENCES sys_info(id), "
                            "FOREIGN KEY (video_info_FK) REFERENCES video_info(id)" )
     
+    VEQ_SUMMARY_COLS = ("id INTEGER PRIMARY KEY,"
+                        "video_name TEXT,"
+                        "video_url TEXT, "
+                        "video_codec TEXT,"
+                        "video_height TEXT,"
+                        "video_width TEXT,"
+                        "mean_power REAL, "
+                        "mean_cpu REAL, "
+                        "mean_memory REAL, "
+                        "mean_gpu REAL,"
+                        "mean_bandwidth REAL,"
+                        "data_transferred REAL,"
+                        "file_size REAL,"
+                        "sys_info_FK INTEGER, "
+                        "video_info_FK INTEGER, "
+                        "FOREIGN KEY (sys_info_FK) REFERENCES sys_info(id), "
+                        "FOREIGN KEY (video_info_FK) REFERENCES video_info(id)" )
+    
 
     def __init__(self,db_loc=None): #consider overriding this to input a filepath  for the DB to be stored, if possible
         '''
@@ -59,9 +77,10 @@ class vEQ_database(object):
             db_loc = default_loc
         try:
             self.db = lite.connect(db_loc, check_same_thread = False) 
-#             videoinfo_index = 0
-#             sysinfo_index = 0
-#             readings_index = 0
+            self.videoinfo_index = 0
+            self.sysinfo_index = 0
+            self.readings_index = 0
+            self.summary_index = 0
         except lite.Error, e:
             print "Error %s:" % e.args[0]
             sys.exit(1)
@@ -73,7 +92,7 @@ class vEQ_database(object):
         with self.db as db:
             print db
             cursor = db.cursor() 
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")  
+            cursor.executescript("SELECT name FROM sqlite_master WHERE type='table';")  
             print tuple(cursor)
                       
     def getDB(self):
@@ -81,26 +100,25 @@ class vEQ_database(object):
                         
     
     def initDB(self):
+#         TODO clean the COLS strings first to avoid injection
         with self.db as db:
             cursor = db.cursor()  
             cursor.execute("CREATE TABLE if NOT exists sys_info (%s);" % self.SYS_INFO_COLS) 
             cursor.execute("CREATE TABLE if NOT exists video_info (%s);" % self.VIDEO_INFO_COLS) 
             cursor.execute("CREATE TABLE if NOT exists ps_readings (%s);" % self.PS_READINGS_COLS) 
             cursor.execute("CREATE TABLE if NOT exists power_readings (%s);" % self.POWER_READINGS_COLS) 
-            #This is an SQL injection vulnerability but 
-#             1. This should not be exposed to users 
-#             2. Makes it easier to change the structure of the table by changing the COLS string at 
-#                 the top of the class rather than within the code.
-    
+            cursor.execute("CREATE TABLE if NOT exists veq_summary (%s);" % self.VEQ_SUMMARY_COLS) 
+ 
     def clearDB(self):
         with self.db as db:
             cursor = db.cursor()
             print "Dropping tables"
             cursor.execute('PRAGMA FOREIGN_KEYS=OFF')
-            cursor.executescript("DROP TABLE power_readings;")
-            cursor.execute("DROP TABLE  ps_readings;")
-            cursor.execute("DROP TABLE sys_info;")
-            cursor.execute("DROP TABLE video_info;")
+            cursor.executescript("DROP TABLE IF EXISTS power_readings;")
+            cursor.executescript("DROP TABLE  IF EXISTS ps_readings;")
+            cursor.executescript("DROP TABLE IF EXISTS sys_info;")
+            cursor.executescript("DROP TABLE IF EXISTS video_info;")
+            cursor.executescript("DROP TABLE IF EXISTS veq_summary;")
       
 
     def insertIntoReadingsTable(self, values):
@@ -109,8 +127,7 @@ class vEQ_database(object):
         
         Argument:
         values - a list of (a single-tuple of) values to be input into the readings table
-                 format is values = [timestamp, power, cpu_percent, mem_percent, rss, net_sent, net_recv, ioread, iowrite, sys_info_FK, video_info_FK)
-            
+                 format is values = [timestamp, power, cpu_percent, mem_percent, rss, net_sent, net_recv, ioread, iowrite, sys_info_FK, video_info_FK)  
         '''
         with self.db:
             cursor = self.db.cursor()  
@@ -150,8 +167,6 @@ class vEQ_database(object):
             cursor.execute("INSERT INTO video_info VALUES (null,?,?,?,?,?,?)", values)
             self.videoinfo_index = cursor.lastrowid
             return self.videoinfo_index
-           
-#          ftamp INT, name TEXT, specs TEXT, codec TEXT, width TEXT, height TEXT
         
            
     def insertIntoPowerTable(self, values):
@@ -171,6 +186,24 @@ class vEQ_database(object):
             self.videoinfo_index = cursor.lastrowid
             return self.videoinfo_index
         
+    def insertIntoVEQSummaryTable(self, values):
+        '''
+        Insert given summary values into veq_summary table
+        params:
+        values - a list of values for the table
+                 [ "id INTEGER PRIMARY KEY," "video_name TEXT, video_url TEXT, " 
+                 "video_codec TEXT, video_height TEXT, video_width TEXT," 
+                 "mean_power REAL, mean_cpu REAL,  mean_memory REAL, " 
+                 "mean_gpu REAL" "mean_bandwidth REAL" "data_transferred REAL," 
+                 "file_size REAL," "sys_info_FK INTEGER, " 
+                 "video_info_FK INTEGER," ]
+        '''
+        with self.db:
+            cursor = self.db.cursor()  
+            cursor.execute("INSERT INTO veq_summary VALUES (null,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", values)
+            self.summary_index = cursor.lastrowid
+            return self.summary_index
+        
         
     def getValuesFromPowerTable(self, start_time, end_time):
         '''
@@ -178,6 +211,7 @@ class vEQ_database(object):
         '''    
         with self.db as db:
             cursor = db.cursor()
+            db.row_factory = lambda cursor, row: row[0]
             cursor.execute("SELECT power FROM power_readings WHERE timestamp BETWEEN ? AND ?", (start_time, end_time))
             values = cursor.fetchall()
         return values
@@ -188,6 +222,8 @@ class vEQ_database(object):
         '''    
         with self.db as db:
             cursor = db.cursor()
+            db.row_factory = lambda cursor, row: row[0]
+            cursor = db.cursor()
             cursor.execute("SELECT cpu_percent FROM ps_readings WHERE timestamp BETWEEN ? AND ?", (start_time, end_time))
             values = cursor.fetchall()
         return values
@@ -197,6 +233,8 @@ class vEQ_database(object):
         Get readings from the Power Table that fall between these times
         '''    
         with self.db as db:
+            cursor = db.cursor()
+            db.row_factory = lambda cursor, row: row[0]
             cursor = db.cursor()
             cursor.execute("SELECT mem_percent FROM ps_readings WHERE timestamp BETWEEN ? AND ?", (start_time, end_time))
             values = cursor.fetchall()
