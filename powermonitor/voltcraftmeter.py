@@ -111,8 +111,9 @@ class VoltcraftMeter():
                     sys.stderr.write("Unable to read()")
                     continue   
                 else:
-                    length = res[0] & 7; # the first byte contains the length in the lower 3 bits ( 111 = 7 )       
-                    logging.debug("Recieved a packet of size: " + str(length) + " from device" )
+                    length = res[0] & 7; # the first byte contains the length in the lower 3 bits ( 111 = 7 )   
+                    if length > 0:    
+                        logging.debug("Recieved a packet of size: " + str(length) + " from device" )
                     prevchar = None 
                     currentchar = None 
                         

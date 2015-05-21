@@ -119,10 +119,12 @@ def real_main(video):
             """
              values = [timestamp INT, name TEXT, specs TEXT, codec TEXT, width TEXT, height TEXT ]
             """
+            
             video_values = [start_time,video,video_data,video_codec,video_width,video_height] 
             video_index = vEQdb.insertIntoVideoInfoTable(video_values)
             
             vlcPlayback = vlc.VEQPlayback(video,vEQdb,vlc_args,meter)
+            logging.debug("Starting playback now")
             vlcPlayback.play(benchmark_duration)
         
             end_time = time.time()
@@ -203,7 +205,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="vEQ-benchmark: A Benchmarking and Measurement Tool for Video")
     parser.add_argument("video" , metavar="VIDEO", help="A local file or URL(Youtube, Vimeo etc.) for the video to be benchmarked")
-    parser.add_argument("-y" , "--youtube-format", metavar="format", dest="default_youtube_quality", help="For Youtube videos, a value that corressponds to the quality level see youtube-dl for details")
+    parser.add_argument("-y" , "--youtube-format", metavar="format", dest="default_youtube_quality", default=default_youtube_quality, help="For Youtube videos, a value that corressponds to the quality level see youtube-dl for details")
     parser.add_argument("-p" , "--power-meter", metavar="meter", dest="meter", help="The meter to use for power measurement TODO: Expand this")
     parser.add_argument("-d", "--duration", metavar="Duration", dest="benchmark_duration", default=benchmark_duration, type=int, help="The length of time in seconds for the benchmark to run.")
 #     

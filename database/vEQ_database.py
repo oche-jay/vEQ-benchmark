@@ -72,7 +72,7 @@ class vEQ_database(object):
         '''
         Constructor
         '''
-        default_loc = '../vEQ_db' 
+        default_loc = '../vEQ_db.sqlite' 
         if db_loc is None:
             db_loc = default_loc
         try:
