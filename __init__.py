@@ -139,7 +139,7 @@ def real_main(video):
 # zip concats the items in two list at the same index as a tuple
 # so basically we concat the list with a slice of itself starting at index 1, and the use the comprehension to find the fdifference
             bitrate =  [y - x for x,y in zip(net_r,net_r[1:])]
-            print bitrate
+#             print bitrate TODO: use matpolotlip to plot results for bitrate cpu and power
         
             def getmean(numpy_array):
                 try:
@@ -165,7 +165,7 @@ def real_main(video):
                               mean_memory, mean_gpu , mean_bandwidth ,data_transferred, file_size, sys_info_index, video_index)
    
             summary_dict = dict(zip(summary_keys, summary_values))
-            print summary_dict
+#             print summary_dict
             
             vEQdb.insertIntoVEQSummaryTable(summary_values)
 #         write this to a summary file json and a database
@@ -215,7 +215,7 @@ if __name__ == '__main__':
  
     vlc_args = "--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq " + "--verbose " + str(verbosity)
     
-    logging.getLogger().setLevel(logging.INFO)
+    logging.getLogger().setLevel(logging.ERROR)
 
     logging.info("Started VEQ_Benchmark")
 
