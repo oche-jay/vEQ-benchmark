@@ -13,6 +13,7 @@ from PyQt4 import QtCore
 from PyQt4 import QtGui
 import powermonitor
 import logging
+from profilehooks import profile
 
 class  VEQPlayback:
     '''
@@ -36,6 +37,7 @@ class  VEQPlayback:
         self.resize = False
         self.vlcWidget = None
         self.playstart_time = 0
+        self.polling_interval = 1
     
     def end_callback(self, event):
         self.cleanExit(0)
@@ -172,10 +174,12 @@ class  VEQPlayback:
             self.db = db
             self.meter = meter
             self.duration = duration
-        '''
-        This method is the "longrunning" thread that handles data collection  for the videeo playback process in a seperate thread
-        '''
+        
+        @profile
         def longRunning(self):
+            '''
+            This method is the "longrunning" thread that handles data collection  for the videeo playback process in a seperate thread
+            '''
             count = 0
             vlcProcess = self.vlc_playback_object.vlcProcess
             sys_index_FK = self.db.sysinfo_index
@@ -225,12 +229,7 @@ class  VEQPlayback:
                 else:
                     io_read = vlcProcess.io_counters().read_bytes
                     io_write = vlcProcess.io_counters().write_bytes
-                
-                
-                power_val = self.meter.get_device_reading()
-                logging.debug("Got power measurement: " +  str(power_val))
-                power_v = float(power_val)
-
+  
                 if self.meter is not None:
                     power_val = self.meter.get_device_reading()
                     logging.debug("Got power measurement: " +  str(power_val))
@@ -238,7 +237,6 @@ class  VEQPlayback:
                 else:
                     power_val = -1
                     power_v = -1
-# >>>>>>> branch 'master' of https://github.com/oche-jay/vEQ-benchmark.git
                 
                 marq_str = str.format("CPU: %3.1f%%%%\nMEM: %3.1f%%%%\nPOWR: %3.1fW\n" % (cpu_val,mempercent_val,power_val)) #need to escape %% twice
                 player.video_set_marquee_string(vlc.VideoMarqueeOption.Text, marq_str)
@@ -258,7 +256,7 @@ class  VEQPlayback:
                     self.finished.emit()
                     break
                 
-                time.sleep(1) #TODO: set this to a polling interval that can be set in args
+                time.sleep(self.vlc_playback_object.polling_interval) #TODO: set this to a polling interval that can be set in args
             
 #                     print_info(self.player)   
             def emitFinished():

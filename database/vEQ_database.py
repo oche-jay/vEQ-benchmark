@@ -4,7 +4,9 @@ Created on 24 Feb 2015
 @author: oche
 '''
 import sys
+import logging
 import sqlite3 as lite
+import os
 
 
 class vEQ_database(object):
@@ -77,6 +79,11 @@ class vEQ_database(object):
             db_loc = default_loc
         try:
             self.db = lite.connect(db_loc, check_same_thread = False) 
+            cwd = os.getcwd()
+            pathname = os.path.dirname(cwd)
+            pwdb = os.path.normpath(os.path.join(pathname,db_loc) )
+            logging.debug("DB created at " + pwdb)
+#             print "DB created at " + pwdb
             self.videoinfo_index = 0
             self.sysinfo_index = 0
             self.readings_index = 0
@@ -212,6 +219,7 @@ class vEQ_database(object):
         with self.db as db:
             cursor = db.cursor()
             db.row_factory = lambda cursor, row: row[0]
+            cursor = db.cursor()
             cursor.execute("SELECT power FROM power_readings WHERE timestamp BETWEEN ? AND ?", (start_time, end_time))
             values = cursor.fetchall()
         return values

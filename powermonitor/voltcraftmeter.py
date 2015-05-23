@@ -166,7 +166,7 @@ if __name__ == '__main__':
             os.makedirs("../profile")
         sys.stderr.write("Starting Profiling\n")
         profile_filename = "../profile/voltcraftmeter_profile.txt"
-        cProfile.run('vc.end_time()',profile_filename)
+        cProfile.run('vc.main()',profile_filename)
         statsfile =  open("../profile/voltcraft_profile_stats.txt", "wb")
         p = pstats.Stats(profile_filename, stream=statsfile)
         stats = p.strip_dirs().sort_stats('cumulative')
