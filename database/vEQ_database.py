@@ -77,13 +77,15 @@ class vEQ_database(object):
         default_loc = '../vEQ_db.sqlite' 
         if db_loc is None:
             db_loc = default_loc
+        elif db_loc.lower() == "memory":
+            db_loc = ':memory:'
         try:
             self.db = lite.connect(db_loc, check_same_thread = False) 
             cwd = os.getcwd()
             pathname = os.path.dirname(cwd)
             pwdb = os.path.normpath(os.path.join(pathname,db_loc) )
             logging.debug("DB created at " + pwdb)
-#             print "DB created at " + pwdb
+            print "DB created at " + pwdb
             self.videoinfo_index = 0
             self.sysinfo_index = 0
             self.readings_index = 0

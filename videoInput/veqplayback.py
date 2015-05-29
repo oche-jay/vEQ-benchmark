@@ -13,7 +13,7 @@ from PyQt4 import QtCore
 from PyQt4 import QtGui
 import powermonitor
 import logging
-from profilehooks import profile
+# from profilehooks import profile
 
 class  VEQPlayback:
     '''
@@ -175,7 +175,7 @@ class  VEQPlayback:
             self.meter = meter
             self.duration = duration
         
-        @profile
+#         @profile
         def longRunning(self):
             '''
             This method is the "longrunning" thread that handles data collection  for the videeo playback process in a seperate thread
@@ -199,9 +199,14 @@ class  VEQPlayback:
                 if window_size[0] and window_size[1] > 10:
                     logging.info("Setting window size to: " + str(window_size))
                     self.vlc_playback_object.vlcWidget.resize(window_size[0],window_size[1])
+                    qr =  self.vlc_playback_object.vlcWidget.frameGeometry()
+                    cp = QtGui.QDesktopWidget().availableGeometry().center()
+                    qr.moveCenter(cp)
+                    self.vlc_playback_object.vlcWidget.move(qr.topLeft())
+                    print "should move"
+                    
                     self.vlc_playback_object.resize = True
-#                 try to resize
-            
+#           try to resize
             sent = psutil.net_io_counters().bytes_sent
             recv = psutil.net_io_counters().bytes_recv
             
@@ -216,6 +221,11 @@ class  VEQPlayback:
                         logging.info("Setting window size to: " + str(window_size))
                         self.vlc_playback_object.vlcWidget.resize(window_size[0],window_size[1])
                         self.vlc_playback_object.resize = True
+                        qr =  self.vlc_playback_object.vlcWidget.frameGeometry()
+                        cp = QtGui.QDesktopWidget().availableGeometry().center()
+                        qr.moveCenter(cp)
+                        self.vlc_playback_object.vlcWidget.move(qr.topLeft())
+                        print "should move"
 
                 timestamp = time.time()
                 cpu_val = vlcProcess.cpu_percent()
@@ -273,8 +283,6 @@ if __name__ == '__main__':
             sys.exit(1)
         vlcPlayback = VEQPlayback(video)
         vlcPlayback.play()
-
-        
     else:
         print('Usage: %s <movie_filename>' % sys.argv[0])
         

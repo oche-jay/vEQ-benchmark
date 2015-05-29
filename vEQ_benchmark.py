@@ -3,6 +3,7 @@ Created on 24 Feb 2015
 
 @author: oche
 '''
+from __future__ import unicode_literals
 import argparse
 import os
 import sys
@@ -10,6 +11,7 @@ import time
 import logging
 import json
 import numpy
+
 from decimal import *
 getcontext().prec = 3
 
@@ -23,6 +25,7 @@ except:
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)) , "youtube-dl"))
 
 from util import cleanResults
+from util import getMean
 from youtube_dl import YoutubeDL
 import database.vEQ_database as DB
 import processmonitor.processMonitor as procmon
@@ -35,6 +38,7 @@ verbosity = -1
 default_youtube_quality= 'bestvideo'
 benchmark_duration = 30 #or -1 for length of video
 meter = None
+default_database = "../vEQ_db.sqlite"
 
 logging.getLogger().setLevel(logging.ERROR)
 
@@ -72,19 +76,28 @@ logging.getLogger().setLevel(logging.ERROR)
 def main(argv=None):
     parser = argparse.ArgumentParser(description="vEQ-benchmark: A Benchmarking and Measurement Tool for Video")
     parser.add_argument("video" , metavar="VIDEO", help="A local file or URL(Youtube, Vimeo etc.) for the video to be benchmarked")
-    parser.add_argument("-y" , "--youtube-format", metavar="format", dest="default_youtube_quality", default=default_youtube_quality, help="For Youtube videos, a value that corressponds to the quality level see youtube-dl for details")
+    parser.add_argument("-y" , "--youtube-format", metavar="format", dest="youtube_quality", default=default_youtube_quality, help="For Youtube videos, a value that corressponds to the quality level see youtube-dl for details")
     parser.add_argument("-p" , "--power-meter", metavar="meter", dest="meter", help="The meter to use for power measurement TODO: Expand this")
     parser.add_argument("-d", "--duration", metavar="Duration", dest="benchmark_duration", default=60, type=int, help="The length of time in seconds for the benchmark to run.")
-    parser.add_argument("-l", "--databse-location", dest="db_loc", metavar ="location for database file", help = "A absolute location for storing the database file ")
+    parser.add_argument("-l", "--databse-location", dest="db_loc", metavar ="location for database file or \'memory\'", help = "A absolute location for storing the database file ")
 #     parser.add_argument("-P", "--Plot", dest="to_plot")
     
     args = parser.parse_args()
     
     video = args.video
     benchmark_duration = args.benchmark_duration
+    youtube_quality =args.youtube_quality
+    db_loc = args.db_loc
+    
+    if youtube_quality is None:
+        youtube_quality = default_youtube_quality
+        
+    if db_loc is None:
+       db_loc = default_database
+        
     to_plot = False
     vlc_args = "--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq " + "--verbose " + str(verbosity)
-    logging.getLogger().setLevel(logging.DEBUG)
+    
     logging.info("Started VEQ_Benchmark")
 
 #     make voltcraftmeter and any other meters callable somehow
@@ -100,7 +113,7 @@ def main(argv=None):
         logging.warning("device wasn't found") 
     
 
-    vEQdb = DB.vEQ_database()
+    vEQdb = DB.vEQ_database(db_loc)
     vEQdb.initDB()
     start_time = time.time()
     cpu = procmon.get_processor()
@@ -136,13 +149,24 @@ def main(argv=None):
             if "yout" or "goog" in video:
                 logging.debug("Found online video: Using youtube-dl to get information")
                 youtube_dl_opts = {
-                         'format' : default_youtube_quality,
+                         'format' : youtube_quality,
                          'quiet' : True
                     }
                 with YoutubeDL(youtube_dl_opts) as ydl:
                     try:
+                        def getInfoDictValue(value, infodict):
+                            try:
+                                return infodict.get(value,"N,A")
+                            except:
+                                string = "Couldn't restrieve value " + str(value) +" from YoutubeDL"
+                                logging.error(string)
+                                sys.stderr.write(string)
+                                if value == 'url':
+                                    sys.exit(1)
+                                return "N/A"
+                                
                         info_dict = ydl.extract_info(video, download=False)
-                        video = info_dict['url']
+                        video = getInfoDictValue("url", info_dict)
                         video_title = info_dict['title']
                         video_data = str(json.dumps(info_dict)) 
                         video_codec = info_dict['format']
@@ -198,21 +222,16 @@ def main(argv=None):
     #TODO: plot this with matpoltlib'''
     #TODO: use matpolotlip to plot results for bitrate cpu and power
 
-    def getmean(numpy_array):
-        try:
-            return numpy_array.mean()
-        except:
-            logging.error(sys.exc_info()[1])
-            return "N/A"
+   
 
 
     p = numpy.array(powers)
     c = numpy.array(cpus)
     m = numpy.array(memorys)
     
-    mean_power = getmean(p)
-    mean_cpu =  getmean(c)
-    mean_memory = getmean(m)
+    mean_power = getMean(p[p>0])
+    mean_cpu =  getMean(c)
+    mean_memory = getMean(m)
     mean_gpu = -1 #TODO: IMplement GPU 
     mean_bandwidth = str(Decimal(data_transferred * 8) / Decimal(1000000* total_duration))
 
@@ -229,16 +248,16 @@ def main(argv=None):
     print "============================================="
     print "vEQ-Summary"
     print "============================================="
-    print "Video Name: " + str(video_title)
+#     print "Video Name: " + str(video_title)
     if online_video:
         print "Video URL: " + video
     print "Benchmark Duration: " + str(end_time - start_time) + "secs"
     print "Video Codec: " + video_codec
     print "Width: " + str(video_width)  
     print "Height: " + str(video_height)
-    print "Mean Power: " + str(p.mean()) + "W"
-    print "Mean CPU Usage: " + str(c.mean()) + "%"
-    print "Mean Memory Usage: " + str(m.mean()) + "%"
+    print "Mean Power: " + str(mean_power) + "W"
+    print "Mean CPU Usage: " + str(mean_cpu) + "%"
+    print "Mean Memory Usage: " + str(mean_memory) + "%"
   
     print "Video Filesize " + "Not Implemented (TODO)"
     if online_video:
