@@ -1,9 +1,9 @@
-import os
+
 import platform
 import re
-from subprocess import PIPE
+
 import subprocess
-import psutil
+
 
 
 # from __main__ import name

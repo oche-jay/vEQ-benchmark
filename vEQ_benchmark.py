@@ -8,18 +8,21 @@ import argparse
 import os
 import sys
 import time
+import re
 import logging
 import json
 import numpy
+from plotter import makeSubPlot
 
 from decimal import *
 getcontext().prec = 3
 
 
 try:
-    from util.pymediainfo import MediaInfo
+    from pymediainfo import MediaInfo
 except:
-    from pymediainfo import MediaInfo    
+    from util.pymediainfo import MediaInfo
+        
 
 # //add youtube-dl to the python path
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)) , "youtube-dl"))
@@ -34,9 +37,9 @@ from powermonitor.voltcraftmeter import VoltcraftMeter
 # TODO: Set logging level from argument
 
 online_video = False
-verbosity = -1
+vlc_verbosity = -1
 default_youtube_quality= 'bestvideo'
-benchmark_duration = 30 #or -1 for length of video
+benchmark_duration = -1#or -1 for length of video
 meter = None
 default_database = "../vEQ_db.sqlite"
 
@@ -80,7 +83,7 @@ def main(argv=None):
     parser.add_argument("-p" , "--power-meter", metavar="meter", dest="meter", help="The meter to use for power measurement TODO: Expand this")
     parser.add_argument("-d", "--duration", metavar="Duration", dest="benchmark_duration", default=60, type=int, help="The length of time in seconds for the benchmark to run.")
     parser.add_argument("-l", "--databse-location", dest="db_loc", metavar ="location for database file or \'memory\'", help = "A absolute location for storing the database file ")
-#     parser.add_argument("-P", "--Plot", dest="to_plot")
+    parser.add_argument("-P", "--Plot", dest="to_plot")
     
     args = parser.parse_args()
     
@@ -96,7 +99,7 @@ def main(argv=None):
        db_loc = default_database
         
     to_plot = False
-    vlc_args = "--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq " + "--verbose " + str(verbosity)
+    vlc_args = "--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq " + "--verbose " + str(vlc_verbosity)
     
     logging.info("Started VEQ_Benchmark")
 
@@ -196,8 +199,6 @@ def main(argv=None):
     vlcPlayback = vlc.VEQPlayback(video,vEQdb,vlc_args,meter)
     logging.debug("Starting playback now")
     
- 
-        
     vlcPlayback.play(benchmark_duration)
 
     end_time = time.time()
@@ -210,20 +211,13 @@ def main(argv=None):
     net_r = vEQdb.getValuesFromPSTable("net_recv", start_time, end_time) 
     data_transferred = net_r[-1] - net_r[0]
     
+   
+
+    
     '''
     http://stackoverflow.com/questions/4029436/subtracting-the-current-and-previous-item-in-a-list 
     '''
-    bitrate =  [y - x for x,y in zip(net_r,net_r[1:])] 
-    
-#     print bitrate
-#     print cpus
-#     print memorys
-#     print powers
-    #TODO: plot this with matpoltlib'''
-    #TODO: use matpolotlip to plot results for bitrate cpu and power
-
-   
-
+    bitrate =  [y - x for x,y in zip(net_r,net_r[1:])]
 
     p = numpy.array(powers)
     c = numpy.array(cpus)
@@ -245,10 +239,11 @@ def main(argv=None):
     
     vEQdb.insertIntoVEQSummaryTable(summary_values)
 #           write this to a summary file json and a database
+    video_title = s = re.sub(r"[^\w\s]", '', video_title)
     print "============================================="
     print "vEQ-Summary"
     print "============================================="
-#     print "Video Name: " + str(video_title)
+    print "Video Name: " + str(video_title)
     if online_video:
         print "Video URL: " + video
     print "Benchmark Duration: " + str(end_time - start_time) + "secs"
@@ -274,10 +269,15 @@ def main(argv=None):
     print "Active NIC Info: " + "Not Yet Implemented"
     print "============================================="
     
-    to_plot = False
+    to_plot = True
+    to_show = True
+ 
+#     TODO implemtent GPU monitoring    
+    gpus=None
+    plot_title = str(video_codec) + "\n(" + str(video_title) + ")"
     if to_plot:
-        import plotter
-        plotter.plot(bitrate, title="Bitrate")
+        makeSubPlot(start_time=start_time, figure_title=plot_title, cpus=cpus, memorys=memorys, bitrate=bitrate, powers=powers, gpus=gpus, to_show=to_show)
+
 
 if __name__ == '__main__':
     main()

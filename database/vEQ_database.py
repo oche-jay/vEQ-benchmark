@@ -262,6 +262,14 @@ class vEQ_database(object):
             values = cursor.fetchall()
         return values
     
+#     TODO: complete this method
+    def getJoinResultsForRunandExport(self,video_key_id):
+        with self.db as db:
+            cursor = db.cursor()
+            data = cursor.execute("select *  from power_readings NATURAL LEFT OUTER JOIN ps_readings"
+                           "where power_readings.video_info_FK = ?", (video_key_id))
+        
+    
 if __name__ == '__main__':
     vEQdb = vEQ_database()
 #     vEQdb.clearDB()
