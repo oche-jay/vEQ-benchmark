@@ -36,10 +36,10 @@ import videoInput.veqplayback as vlc
 from powermonitor.voltcraftmeter import VoltcraftMeter
 # TODO: Set logging level from argument
 
-online_video = False
+
 vlc_verbosity = -1
 default_youtube_quality= 'bestvideo'
-benchmark_duration = -1#or -1 for length of video
+benchmark_duration = 120#or -1 for length of video
 meter = None
 default_database = "../vEQ_db.sqlite"
 
@@ -81,7 +81,7 @@ def main(argv=None):
     parser.add_argument("video" , metavar="VIDEO", help="A local file or URL(Youtube, Vimeo etc.) for the video to be benchmarked")
     parser.add_argument("-y" , "--youtube-format", metavar="format", dest="youtube_quality", default=default_youtube_quality, help="For Youtube videos, a value that corressponds to the quality level see youtube-dl for details")
     parser.add_argument("-p" , "--power-meter", metavar="meter", dest="meter", help="The meter to use for power measurement TODO: Expand this")
-    parser.add_argument("-d", "--duration", metavar="Duration", dest="benchmark_duration", default=60, type=int, help="The length of time in seconds for the benchmark to run.")
+    parser.add_argument("-d", "--duration", metavar="Duration", dest="benchmark_duration", default=120, type=int, help="The length of time in seconds for the benchmark to run.")
     parser.add_argument("-l", "--databse-location", dest="db_loc", metavar ="location for database file or \'memory\'", help = "A absolute location for storing the database file ")
     parser.add_argument("-P", "--Plot", dest="to_plot")
     
@@ -92,18 +92,28 @@ def main(argv=None):
     youtube_quality =args.youtube_quality
     db_loc = args.db_loc
     
+    
+    video_title = None
+    video_data = None
+    video_codec = None
+    video_height = None
+    video_width = None
+    file_size = None
+    video_url = None
+    online_video = False
+    
     if youtube_quality is None:
         youtube_quality = default_youtube_quality
         
     if db_loc is None:
        db_loc = default_database
-        
+   
     to_plot = False
     vlc_args = "--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq " + "--verbose " + str(vlc_verbosity)
     
     logging.info("Started VEQ_Benchmark")
 
-#     make voltcraftmeter and any other meters callable somehow
+#   make voltcraftmeter and any other meters callable somehow
     meter = VoltcraftMeter() 
     
 #    can inject dependency here i.e power meter or smc or bios or batterty
@@ -161,7 +171,7 @@ def main(argv=None):
                             try:
                                 return infodict.get(value,"N,A")
                             except:
-                                string = "Couldn't restrieve value " + str(value) +" from YoutubeDL"
+                                string = "Couldn't retrieve value " + str(value) +" from YoutubeDL"
                                 logging.error(string)
                                 sys.stderr.write(string)
                                 if value == 'url':
@@ -210,10 +220,7 @@ def main(argv=None):
     memorys = vEQdb.getMemValuesFromPSTable(start_time, end_time)
     net_r = vEQdb.getValuesFromPSTable("net_recv", start_time, end_time) 
     data_transferred = net_r[-1] - net_r[0]
-    
-   
 
-    
     '''
     http://stackoverflow.com/questions/4029436/subtracting-the-current-and-previous-item-in-a-list 
     '''
@@ -269,12 +276,12 @@ def main(argv=None):
     print "Active NIC Info: " + "Not Yet Implemented"
     print "============================================="
     
-    to_plot = True
-    to_show = True
+    to_plot = False
+    to_show = False
  
 #     TODO implemtent GPU monitoring    
     gpus=None
-    plot_title = str(video_codec) + "\n(" + str(video_title) + ")"
+    plot_title = str(video_codec) + "- (" + str(video_title) + ")"
     if to_plot:
         makeSubPlot(start_time=start_time, figure_title=plot_title, cpus=cpus, memorys=memorys, bitrate=bitrate, powers=powers, gpus=gpus, to_show=to_show)
 

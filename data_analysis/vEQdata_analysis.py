@@ -11,7 +11,7 @@ from util import getConfidence
 
 # TODO: Make this portable or more sensibel
 PATH_TO_DB = 'C:/Users/ooe/Documents/git/vEQ_db.sqlite'
-PATH_TO_DB = 'C:/Users/ooe/Documents/linux_vEQ_db.sqlite'
+# PATH_TO_DB = 'C:/Users/ooe/Documents/linux_vEQ_db.sqlite'
 
 dbpath = os.path.abspath(PATH_TO_DB)
 vEQdb = vqdb.vEQ_database(dbpath)
@@ -22,6 +22,7 @@ vEQdb.printTablesinDB()
 vcodecs = vEQdb.getDistinctVideoCodecsfromDB()
 
 allsummary = vEQdb.getSummaryfromVeqDB()
+
 
 
 vcs = []
@@ -43,6 +44,7 @@ for vcodec in vcodecs:
 #         print vc, power_tup
     
     power_np = numpy.array(power_tup)
+    print vc, power_np
     cpu_np = numpy.array(cpu_tup)
     
     vcs.append(vc)

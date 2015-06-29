@@ -77,13 +77,17 @@ def makeSubPlot(start_time=None, figure_title=None, powers=None, cpus=None, memo
         gpusfig.set_title("Instantenous GPU Util(%)")
         gpusfig.set_ylabel("Bitrate (Mbps)")
      
-    gs1.tight_layout(fig, rect=[0, 0.03, 1, 0.95]) 
+    gs1.tight_layout(fig, rect=[0, 0.03, 1, 0.97]) 
         
     if to_save:
         if not filename:
+            if not figure_title:
+                figure_title = "vEQ-benchmark Generic File"
             figure_title = re.sub(r"[^\w\s]", '', figure_title)
             filename = str(start_time) + "_" + re.sub(r"\s+", '_', figure_title)
         plt.savefig("plots/" + str(filename) + ".jpg") 
         
     if to_show:
         plt.show()
+        
+    
