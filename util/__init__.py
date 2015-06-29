@@ -1,5 +1,6 @@
 import logging
 import numpy
+from scipy import stats
 import sys
 
 def cleanResults(a_list,threshold=None):
@@ -30,12 +31,12 @@ def outliers(a):
 
     return outerQ1,innerQ1,Q2,innerQ3,outerQ3
 
-# if __name__ == '__main__':
-#     # Example from http://www.wikihow.com/Calculate-Outliers
-#     temps = [71, 70, 73, 70, 70, 69, 70, 72, 71, 300, 71, 69]
-#     print sorted(temps)
-#     print outliers(temps)
-
+def getConfidence(power_np):
+    confidence_level=0.95
+    confidence_interval = stats.sem(power_np) * stats.t._ppf((1+confidence_level)/2, len(power_np)-1)
+    return confidence_interval
+    
+    
 def getMean(numpy_array):
     def reject_outliers(data, m=2):
         """
