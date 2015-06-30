@@ -9,14 +9,14 @@ import matplotlib.gridspec as gridspec
 import os
 import re
 import gc
-import time
+import time, datetime
 
 def plot(alist, title=None, filename=None, show=False):
     plt.plot(alist)
     plt.ylabel(title)
     if not os.path.exists("plots"): 
             os.makedirs("plots")
-    plt.savefig("plots/" + str(filename) + ".jpg")
+    plt.savefig("plots/" + str(filename) + ".pdf")
       
     if show:
         plt.show()
@@ -26,8 +26,15 @@ def plot(alist, title=None, filename=None, show=False):
     gc.collect()
     
 # TODO change this to use kwargs instead of this long list of stuff
-def makeSubPlot(start_time=None, figure_title=None, powers=None, cpus=None, memorys=None, gpus=None, bitrate=None, to_save=True, to_show=True, filename=None ):    
-    start_time =  str(start_time)
+# def makeSubPlot(start_time=None, figure_title=None, powers=None, cpus=None, memorys=None, gpus=None, bitrate=None, to_save=True, to_show=True, filename=None ):    
+def makeSubPlot(powers=None, cpus=None, memorys=None, bitrate=None, **kwargs):  
+    plt.rcParams['pdf.fonttype']=42  
+    start_time = kwargs.get('start_time', time.time())
+    gpus = kwargs.get('gpus', False)
+    figure_title = kwargs.get('figure_title', "Default Figure Title")
+    to_save = kwargs.get('to_save', True)
+    to_show = kwargs.get('to_show', False)
+    filename = kwargs.get('filename', datetime.datetime.fromtimestamp(start_time).strftime('%Y%m%d%H%M%S'))
     
     NUMBER_OF_PLTS = 4
     if gpus:
@@ -83,7 +90,7 @@ def makeSubPlot(start_time=None, figure_title=None, powers=None, cpus=None, memo
         if not filename:
             figure_title = re.sub(r"[^\w\s]", '', figure_title)
             filename = str(start_time) + "_" + re.sub(r"\s+", '_', figure_title)
-        plt.savefig("plots/" + str(filename) + ".jpg") 
+        plt.savefig("plots/" + str(filename) + ".pdf") 
         
     if to_show:
         plt.show()
