@@ -288,6 +288,7 @@ class vEQ_database(object):
             values = cursor.fetchall()  
         return values 
     
+# <<<<<<< HEAD
     
     def getDistinctVideoHeightfromDB(self):  
         '''
@@ -327,6 +328,7 @@ class vEQ_database(object):
             cursor = db.cursor()
 #             SELECT  distinct video_codec as vc,  avg(mean_power)  as pow, avg(mean_cpu) as cpu FROM veq_summary group by video_codec order by vc
             cursor.execute("SELECT video_height, mean_power , mean_cpu FROM veq_summary order by video_height;")
+
             values = cursor.fetchall()
 #         i=0
 #         for v in values:
@@ -337,6 +339,7 @@ class vEQ_database(object):
     
 if __name__ == '__main__':
     dbpath = os.path.abspath('C:/Users/ooe/Documents/git/vEQ_db.sqlite')
+# <<<<<<< HEAD
     dbpath = os.path.abspath('/Users/oche/Dropbox/vEQ_db.sqlite')
     vEQdb = vEQ_database(dbpath)
     vEQdb.printTablesinDB()
@@ -346,6 +349,13 @@ if __name__ == '__main__':
     vals = vEQdb.getDistinctVideoHeightfromDB()
     for v in vals:
         print v
+# =======
+    vEQdb = vEQ_database(dbpath)
+    vEQdb.printTablesinDB()
+    
+    vEQdb.getSummaryfromVeqDB()
+    vEQdb.getDistinctVideoCodecsfromDB()
+# >>>>>>> refs/remotes/origin/master
 #     vEQdb.initDB()
 
 #     vEQdb.printTablesinDB()
