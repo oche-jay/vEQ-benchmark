@@ -5,7 +5,7 @@ Created on 22 May 2015
 '''
 import unittest
 import plotter
-import matplotlib.pyplot as plt
+
 
 class Test(unittest.TestCase):
     def setUp(self):
