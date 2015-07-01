@@ -6,12 +6,11 @@ Created on 13 Feb 2015
 
 import time
 
-import database.vEQ_database as vEQdb
+
 import vlc, sys, os, psutil
- #Might work on Linux and Windows
 from PyQt4 import QtCore
 from PyQt4 import QtGui
-import powermonitor
+
 import logging
 # from profilehooks import profile
 
@@ -134,7 +133,7 @@ class  VEQPlayback:
         self.cleanExit(vlcApp.exec_())
         
     
-    def cleanExit(self,int): 
+    def cleanExit(self,i): 
         self.qThread.exit(0)
            
         
@@ -206,11 +205,7 @@ class  VEQPlayback:
                     print "should move"
                     
                     self.vlc_playback_object.resize = True
-#           try to resize
-            sent = psutil.net_io_counters().bytes_sent
-            recv = psutil.net_io_counters().bytes_recv
-            
-#             TODO: Profile why this look takes a whole second to complete
+
             while True:
                 count += 1
                 
@@ -254,13 +249,14 @@ class  VEQPlayback:
                 sent_now = psutil.net_io_counters().bytes_sent
                 recv_now = psutil.net_io_counters().bytes_recv
        
-                values = [timestamp, cpu_val, mempercent_val, rss,sent_now, recv_now, io_read, io_write, sys_index_FK, video_index_FK]
+                values = [timestamp, cpu_val, mempercent_val, rss, sent_now, recv_now, io_read, io_write, sys_index_FK, video_index_FK]
                 powers = [timestamp,power_v,sys_index_FK, video_index_FK] 
                 self.db.insertIntoReadingsTable(values)
                 self.db.insertIntoPowerTable(powers)
                 
                 elapsed = timestamp - self.vlc_playback_object.playstart_time
                 logging.info("Time elapsed: " + str(elapsed))
+                
                 if self.duration > 0 and elapsed  >= self.duration:
                     logging.info("Benchmark duration completed...Exiting")
                     self.finished.emit()

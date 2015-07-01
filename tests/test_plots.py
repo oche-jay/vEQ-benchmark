@@ -27,7 +27,8 @@ class Test(unittest.TestCase):
         plotter.plot(self.powers, title="Power Usage")
 
     def testsubplots(self):
-        plotter.makeSubPlot(start_time=123456,cpus=self.cpus,memorys=self.memorys,powers=self.powers,bitrate=self.bitrate)
+        title = "Codec Info" + "- Moviename"
+        plotter.makeSubPlot(start_time=123456,figure_title=title, cpus=self.cpus,memorys=self.memorys,powers=self.powers,bitrate=self.bitrate)
 
 
 if __name__ == "__main__":
