@@ -11,10 +11,14 @@ from util import getConfidence
 import matplotlib.pyplot as plt
 
 # TODO: Make this portable or more sensibel
+
 # PATH_TO_DB = 'C:/Users/ooe/Documents/git/vEQ_db.sqlite'
 # PATH_TO_DB = 'C:/Users/ooe/Documents/linux_vEQ_db.sqlite'
 PATH_TO_DB = '/Users/oche/Dropbox/vEQ_db.sqlite'
 # PATH_TO_DB = '/Users/oche/linux_vEQ_db.sqlite'
+# PATH_TO_DB = 'C:/Users/ooe/Documents/git/vEQ_db.sqlite'
+# PATH_TO_DB = 'C:/Users/ooe/Documents/linux_vEQ_db.sqlite'
+
 
 dbpath = os.path.abspath(PATH_TO_DB)
 vEQdb = vqdb.vEQ_database(dbpath)
@@ -25,6 +29,7 @@ vEQdb.printTablesinDB()
 # uncomment for grouping according to youtube format/codc
 vcodecs = vEQdb.getDistinctVideoCodecsfromDB()
 allsummary = vEQdb.getSummaryfromVeqDB()
+
 
 # for grouping according to video_height
 vheights = vEQdb.getDistinctVideoHeightfromDB()
@@ -43,12 +48,14 @@ def plotPowerandCPU(vcodecs, allsummary, targets=[], **kwargs):
     title = kwargs.get('title', "Default Title")
     filename = kwargs.get('filename', "")
     
+# <<<<<<< HEAD
     plt.rcParams['pdf.fonttype']=42 #to fix issue with wierd percentage symbols on Mac OSX
     vcs = []
     powers= []
     power_confs = []
     cpus = []
     cpus_confs = []
+
     
     for vcodec in vcodecs:
         vc = vcodec[0]
