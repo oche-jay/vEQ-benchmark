@@ -36,13 +36,9 @@ import videoInput.veqplayback as vlc
 from powermonitor.voltcraftmeter import VoltcraftMeter
 # TODO: Set logging level from argument
 
-<<<<<<< HEAD
+
 online_video = False
 vlc_verbosity = 3
-=======
-
-vlc_verbosity = -1
->>>>>>> refs/remotes/origin/master
 default_youtube_quality= 'bestvideo'
 benchmark_duration = 120#or -1 for length of video
 meter = None
