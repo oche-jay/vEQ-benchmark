@@ -26,7 +26,8 @@ vEQdb = vqdb.vEQ_database(dbpath)
 s =time.time()
 vEQdb.printTablesinDB()
 
-# uncomment for grouping according to youtube format/codc
+# uncomment for grouping according to youtube format/codc]]]
+
 vcodecs = vEQdb.getDistinctVideoCodecsfromDB()
 allsummary = vEQdb.getSummaryfromVeqDB()
 
