@@ -37,13 +37,13 @@ from powermonitor.voltcraftmeter import VoltcraftMeter
 # TODO: Set logging level from argument
 
 online_video = False
-vlc_verbosity = -1
+vlc_verbosity = 3
 default_youtube_quality= 'bestvideo'
 benchmark_duration = -1#or -1 for length of video
 meter = None
 default_database = "../vEQ_db.sqlite"
 
-logging.getLogger().setLevel(logging.ERROR)
+logging.getLogger().setLevel(logging.DEBUG)
 
 # Some available Formats for Youtube
 # format code  extension  resolution note

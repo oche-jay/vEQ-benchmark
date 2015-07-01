@@ -7,6 +7,8 @@ import sys
 import logging
 import sqlite3 as lite
 import os
+import traceback
+from os.path import expanduser
 
 
 class vEQ_database(object):
@@ -74,7 +76,10 @@ class vEQ_database(object):
         '''
         Constructor
         '''
-        default_loc = '../vEQ_db.sqlite' 
+        home = expanduser("~")
+        default_loc = os.path.join(home, 'vEQ_db.sqlite')
+        print default_loc
+        
         if db_loc is None:
             db_loc = default_loc
         elif db_loc.lower() == "memory":
@@ -84,14 +89,17 @@ class vEQ_database(object):
             cwd = os.getcwd()
             pathname = os.path.dirname(cwd)
             pwdb = os.path.normpath(os.path.join(pathname,db_loc) )
-            logging.debug("DB created at " + pwdb)
-            print "DB created at " + pwdb
+            
+            logging.debug("DB located at " + pwdb)
+            
+            print "DB located at " + pwdb
             self.videoinfo_index = 0
             self.sysinfo_index = 0
             self.readings_index = 0
             self.summary_index = 0
         except lite.Error, e:
-            print "Error %s:" % e.args[0]
+            print(traceback.format_exc())
+            logging.error( "Error %s:" % e.args[0])
             sys.exit(1)
 #         finally:
 #             if self.db:
@@ -268,15 +276,79 @@ class vEQ_database(object):
             cursor = db.cursor()
             data = cursor.execute("select *  from power_readings NATURAL LEFT OUTER JOIN ps_readings"
                            "where power_readings.video_info_FK = ?", (video_key_id))
+     
+     
+    def getDistinctVideoCodecsfromDB(self):  
+        '''
+        Returns all distinct video_codecs, and the mean power in the DB, ordered by the average power
+        '''
+        with self.db as db:
+            cursor = db.cursor()
+            cursor.execute("SELECT video_codec, avg(mean_power) as pow FROM veq_summary GROUP BY video_codec ORDER BY pow;")
+            values = cursor.fetchall()  
+        return values 
+    
+    
+    def getDistinctVideoHeightfromDB(self):  
+        '''
+        Returns all distinct video_heights, and the mean power in the DB, ordered by the height
+        '''
+        with self.db as db:
+            cursor = db.cursor()
+            cursor.execute("SELECT video_height, avg(mean_power) as pow FROM veq_summary GROUP BY video_height ORDER BY pow;")
+            values = cursor.fetchall()  
+        return values 
+    
+    def getSummaryfromVeqDB(self):
+        '''
+        Get individual readings for power, cpu from the veq_summary table
+        '''    
+        with self.db as db:
+#             cursor = db.cursor()
+#             db.row_factory = lambda cursor, row: row[0]
+            cursor = db.cursor()
+#             SELECT  distinct video_codec as vc,  avg(mean_power)  as pow, avg(mean_cpu) as cpu FROM veq_summary group by video_codec order by vc
+            cursor.execute("SELECT video_codec, mean_power , mean_cpu FROM veq_summary order by video_codec;")
+            values = cursor.fetchall()
+#         i=0
+#         for v in values:
+#             i+=1
+#             print i,v
+        return values
+    
+        
+    def getSummaryfromVeqDBbyHeight(self):
+        '''
+        Get individual readings for video_height, mean_power, mean_cpu from the veq_summary table
+        '''    
+        with self.db as db:
+#             cursor = db.cursor()
+#             db.row_factory = lambda cursor, row: row[0]
+            cursor = db.cursor()
+#             SELECT  distinct video_codec as vc,  avg(mean_power)  as pow, avg(mean_cpu) as cpu FROM veq_summary group by video_codec order by vc
+            cursor.execute("SELECT video_height, mean_power , mean_cpu FROM veq_summary order by video_height;")
+            values = cursor.fetchall()
+#         i=0
+#         for v in values:
+#             i+=1
+#             print i,v
+        return values
         
     
 if __name__ == '__main__':
-    vEQdb = vEQ_database()
-#     vEQdb.clearDB()
+    dbpath = os.path.abspath('C:/Users/ooe/Documents/git/vEQ_db.sqlite')
+    dbpath = os.path.abspath('/Users/oche/Dropbox/vEQ_db.sqlite')
+    vEQdb = vEQ_database(dbpath)
+    vEQdb.printTablesinDB()
+    
+    vEQdb.getSummaryfromVeqDB()
+    vEQdb.getDistinctVideoCodecsfromDB()
+    vals = vEQdb.getDistinctVideoHeightfromDB()
+    for v in vals:
+        print v
 #     vEQdb.initDB()
-    vEQdb.printTablesinDB()
-    vEQdb.clearDB()
-    vEQdb.printTablesinDB()
+
+#     vEQdb.printTablesinDB()
 #     import processmonitor.processMonitor as procMon
 #     import time
 #     timestamp = time.time()
