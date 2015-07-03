@@ -29,7 +29,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)) , "yo
 
 from util import cleanResults
 from util import getMean
+
 from youtube_dl import YoutubeDL
+
 import database.vEQ_database as DB
 import processmonitor.processMonitor as procmon
 import videoInput.veqplayback as vlc
@@ -40,7 +42,7 @@ from powermonitor.voltcraftmeter import VoltcraftMeter
 online_video = False
 vlc_verbosity = 3
 default_youtube_quality= 'bestvideo'
-benchmark_duration = 120#or -1 for length of video
+benchmark_duration = 120 #or -1 for length of video
 meter = None
 default_database = "../vEQ_db.sqlite"
 
@@ -84,15 +86,15 @@ def main(argv=None):
     parser.add_argument("-p" , "--power-meter", metavar="meter", dest="meter", help="The meter to use for power measurement TODO: Expand this")
     parser.add_argument("-d", "--duration", metavar="Duration", dest="benchmark_duration", default=120, type=int, help="The length of time in seconds for the benchmark to run.")
     parser.add_argument("-l", "--databse-location", dest="db_loc", metavar ="location for database file or \'memory\'", help = "A absolute location for storing the database file ")
-    parser.add_argument("-P", "--Plot", dest="to_plot")
-    
-    args = parser.parse_args()
-    
+    parser.add_argument("-P", "--plot", dest="to_plot", action='store_true', help="Flag to set if this session should be plotted")
+    parser.add_argument("-S", "--show", dest="to_show", action='store_true', help="Flag to set if this session should be displayed on the screen after a session is completed")
+
+    args = parser.parse_args()    
     video = args.video
     benchmark_duration = args.benchmark_duration
     youtube_quality =args.youtube_quality
     db_loc = args.db_loc
-    
+    to_plot = args.to_plot
     
     video_title = None
     video_data = None
@@ -109,7 +111,6 @@ def main(argv=None):
     if db_loc is None:
        db_loc = default_database
    
-    to_plot = False
     vlc_args = "--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq " + "--verbose " + str(vlc_verbosity)
     
     logging.info("Started VEQ_Benchmark")
@@ -126,7 +127,6 @@ def main(argv=None):
     elif meter.initDevice() is None:
         logging.warning("device wasn't found") 
     
-
     vEQdb = DB.vEQ_database(db_loc)
     vEQdb.initDB()
     start_time = time.time()
@@ -137,7 +137,6 @@ def main(argv=None):
     
     values = [start_time,os_info,cpu, gpu,specs]
     sys_info_index = vEQdb.insertIntoSysInfoTable(values)
-    
 
 #     real_main(video)
 # def real_main(video):
@@ -157,6 +156,7 @@ def main(argv=None):
                     video_codec = track.codec
                     video_height = track.height
                     video_width = track.width
+        
         elif ("http" or "www" in video):
             online_video = True
             logging.debug("Found online video: Using youtube-dl to get information")
@@ -203,7 +203,7 @@ def main(argv=None):
     """
      values = [timestamp INT, name TEXT, specs TEXT, codec TEXT, width TEXT, height TEXT ]
     """
-    
+
     video_values = [start_time,video,video_data,video_codec,video_width,video_height] 
     video_index = vEQdb.insertIntoVideoInfoTable(video_values)
     
@@ -248,6 +248,7 @@ def main(argv=None):
     vEQdb.insertIntoVEQSummaryTable(summary_values)
 #           write this to a summary file json and a database
     video_title = s = re.sub(r"[^\w\s]", '', video_title)
+    
     print "============================================="
     print "vEQ-Summary"
     print "============================================="
@@ -277,7 +278,7 @@ def main(argv=None):
     print "Active NIC Info: " + "Not Yet Implemented"
     print "============================================="
     
-    to_plot = False
+#     to_plot = False
     to_show = False
  
 #     TODO implemtent GPU monitoring    
