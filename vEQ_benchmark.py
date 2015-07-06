@@ -149,6 +149,7 @@ def main(argv=None):
 
 #     real_main(video)
 # def real_main(video):
+#============VLC VIDEO SPECIFIC
     if ("http" or "www") not in video and not (os.access(video, os.R_OK)):
         print('Error: %s file not readable' % video)
         logging.error('Error: %s file not readable' % video)
@@ -216,10 +217,14 @@ def main(argv=None):
     video_values = [start_time,video,video_data,video_codec,video_width,video_height] 
     video_index = vEQdb.insertIntoVideoInfoTable(video_values)
     
-    vlcPlayback = vlc.VEQPlayback(video,vEQdb,vlc_args,meter)
+#  ================  VLC VIDEO SPECIFIC =============== 
+    
+    
+    vEQPlayback = vlc.VLCPlayback(video,vEQdb,vlc_args,meter)
+    
     logging.debug("Starting playback now")
     
-    vlcPlayback.play(benchmark_duration)
+    vEQPlayback.start(benchmark_duration)
 
     end_time = time.time()
   

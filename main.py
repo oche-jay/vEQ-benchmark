@@ -122,8 +122,8 @@ def real_main(video):
             video_values = [start_time,video,video_data,video_codec,video_width,video_height] 
             video_index = vEQdb.insertIntoVideoInfoTable(video_values)
             
-            vlcPlayback = vlc.VEQPlayback(video,vEQdb,vlc_args,meter)
-            vlcPlayback.play(benchmark_duration)
+            vlcPlayback = vlc.VLCPlayback(video,vEQdb,vlc_args,meter)
+            vlcPlayback.start(benchmark_duration)
         
             end_time = time.time()
           
