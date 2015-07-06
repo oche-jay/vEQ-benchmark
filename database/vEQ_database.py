@@ -77,7 +77,7 @@ class vEQ_database(object):
         Constructor
         '''
         home = expanduser("~")
-        default_loc = os.path.join(home, 'vEQ_db.sqlite')
+        default_loc = os.path.join(home, "vEQ-benchmark", 'vEQ_db.sqlite')
         print default_loc
         
         if db_loc is None:

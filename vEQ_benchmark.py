@@ -13,6 +13,7 @@ import logging
 import json
 import numpy
 from plotter import makeSubPlot
+from os.path import expanduser
 
 from decimal import *
 getcontext().prec = 3
@@ -38,13 +39,22 @@ import videoInput.veqplayback as vlc
 from powermonitor.voltcraftmeter import VoltcraftMeter
 # TODO: Set logging level from argument
 
+def makeDefaultDBFolder():
+    home = expanduser("~")
+    print home
+    video_download_folder = os.path.join(home, "vEQ-benchmark")
+    if not os.path.exists(video_download_folder):
+        os.makedirs(video_download_folder)
+    return video_download_folder
 
 online_video = False
 vlc_verbosity = 3
 default_youtube_quality= 'bestvideo'
 benchmark_duration = 120 #or -1 for length of video
 meter = None
-default_database = "../vEQ_db.sqlite"
+
+default_folder= makeDefaultDBFolder()
+default_database = os.path.join( default_folder, "vEQ_db.sqlite")
 
 logging.getLogger().setLevel(logging.DEBUG)
 
@@ -78,14 +88,13 @@ logging.getLogger().setLevel(logging.DEBUG)
 # 18           mp4        640x360    
 # 22           mp4        1280x720   (best)
 
-
 def main(argv=None):
     parser = argparse.ArgumentParser(description="vEQ-benchmark: A Benchmarking and Measurement Tool for Video")
     parser.add_argument("video" , metavar="VIDEO", help="A local file or URL(Youtube, Vimeo etc.) for the video to be benchmarked")
     parser.add_argument("-y" , "--youtube-format", metavar="format", dest="youtube_quality", default=default_youtube_quality, help="For Youtube videos, a value that corressponds to the quality level see youtube-dl for details")
     parser.add_argument("-p" , "--power-meter", metavar="meter", dest="meter", help="The meter to use for power measurement TODO: Expand this")
     parser.add_argument("-d", "--duration", metavar="Duration", dest="benchmark_duration", default=120, type=int, help="The length of time in seconds for the benchmark to run.")
-    parser.add_argument("-l", "--databse-location", dest="db_loc", metavar ="location for database file or \'memory\'", help = "A absolute location for storing the database file ")
+    parser.add_argument("-D", "--Database-location", dest="db_loc", metavar ="location for database file or \'memory\'", help = "A absolute location for storing the database file ")
     parser.add_argument("-P", "--plot", dest="to_plot", action='store_true', help="Flag to set if this session should be plotted")
     parser.add_argument("-S", "--show", dest="to_show", action='store_true', help="Flag to set if this session should be displayed on the screen after a session is completed")
 
@@ -109,7 +118,7 @@ def main(argv=None):
         youtube_quality = default_youtube_quality
         
     if db_loc is None:
-       db_loc = default_database
+        db_loc = default_database
    
     vlc_args = "--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq " + "--verbose " + str(vlc_verbosity)
     
