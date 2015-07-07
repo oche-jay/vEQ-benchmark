@@ -30,6 +30,23 @@ class vEQ_database(object):
                         "codec TEXT, "
                         "width TEXT, "
                         " height TEXT")
+    
+    VIDEO_QUALITY_COLS = ("id INTEGER PRIMARY KEY,"
+                        "timestamp REAL, " 
+                        "video TEXT, "
+                        "url TEXT, "
+                        "reference_videoname TEXT,"
+                        "metric1_ypsnr TEXT, "
+                        "metric2_apsnr TEXT, "
+                        "metric3_yssim TEXT, "
+                        "metric4_assim TEXT, "
+                        "metric5_other TEXT, "
+                        "metric6_other TEXT, " 
+                        "metric7_other TEXT, "
+                        "metric8_other TEXT, "
+                        "metric9_other TEXT, "
+                        "metric10_other TEXT "
+                         )
                     
     PS_READINGS_COLS = ("id INTEGER PRIMARY KEY,"
                      "timestamp REAL,"
@@ -148,7 +165,7 @@ class vEQ_database(object):
         '''
         with self.db:
             cursor = self.db.cursor()  
-            cursor.execute("INSERT INTO ps_readings VALUES (null,?,?,?,?,?,?,?,?,?,?)", values)
+            cursor.execute( "INSERT INTO ps_readings VALUES (null,?,?,?,?,?,?,?,?,?,?)", values)
             global readings_index 
             readings_index = cursor.lastrowid
             return readings_index
@@ -339,8 +356,8 @@ class vEQ_database(object):
     
 if __name__ == '__main__':
     dbpath = os.path.abspath('C:/Users/ooe/Documents/git/vEQ_db.sqlite')
-# <<<<<<< HEAD
     dbpath = os.path.abspath('/Users/oche/Dropbox/vEQ_db.sqlite')
+    
     vEQdb = vEQ_database(dbpath)
     vEQdb.printTablesinDB()
     
