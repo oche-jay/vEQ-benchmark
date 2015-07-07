@@ -16,7 +16,8 @@ import re
 from os.path import expanduser
 from youtube_dl.utils import DownloadError
 import pickle
-# import datetime
+import datetime
+import time
 import database.vEQ_database as DB
 
 try:
@@ -169,6 +170,9 @@ def prepareFileName(filename):
 
 
 def downloadAndRenameVideo(video, video_download_folder, **kwargs):
+    """
+    Downloads a video using Youtube-dl and renames it to a conisintent filename
+    """
     if not kwargs["quality"]:
         logging.warn("No Qualuty level specified, will use youtube-dl best quality")    
     quality = kwargs.get('quality',"best") #18 for youtube is h264, mp, 360p
@@ -213,6 +217,46 @@ def makeDownloadsFolder():
         os.makedirs(video_download_folder)
     return video_download_folder
 
+
+def tiny_ssim(testvideo_width, testvideo_height, test_yuv_file, reference_video_yuv):
+    commandx = ["tiny_ssim", reference_video_yuv, test_yuv_file, str(testvideo_width) + "x" + str(testvideo_height)]
+    for it in commandx:
+        print it
+    
+    print " " #     http://blog.endpoint.com/2015/01/getting-realtime-output-using-python.html
+    '''
+    Calling Popen with universal_newlines=True because tiny_ssim 
+    ouputs each line with ^M newline character - which maybe makes sense only
+    on Windows or something, 
+    In any case, this causes problems if not set
+    '''
+    p = Popen(commandx, env=ENV_DICT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
+#     out, err = p.communicate(input) //communicate() is potentially memory intensive
+    output_arr = []
+    while True:
+        output = p.stdout.readline()
+        if output == '' and p.poll() is not None:
+#             break
+            print ""
+        if output:
+            output_arr.append(output)
+            logging.info(output.strip())
+    
+    ssim_outfile = open("out_ssim.txt", "wb")
+    pickle.dump(output_arr, ssim_outfile)
+    ssim_arr = []
+#         Frame 1849 | PSNR Y:60.957  U:67.682  V:67.326  All:62.262 | SSIM Y:0.99984 U:0.99984 V:0.99982 All:0.99984 (37.96369)
+#         Frame 1850 | PSNR Y:60.920  U:67.682  V:67.326  All:62.228 | SSIM Y:0.99984 U:0.99984 V:0.99982 All:0.99984 (37.94860)
+#     last_val = 'Total 1851 frames | PSNR Y:45.039  U:52.712  V:52.995  All:46.454 | SSIM Y:0.98834 U:0.99602 V:0.99642 All:0.99096 (20.43960)\n'
+    last_val = output_arr[-1]
+   
+    for it in output_arr:
+        ssim_arr.append(re.split(r"[^\d.]+", it))
+    
+    tiny_ssim_results = re.split(r"[^\d.]+", last_val)
+   
+    return tiny_ssim_results
+
 def main(argv=None):
     logging.getLogger().setLevel(logging.INFO)
     parser = argparse.ArgumentParser(description="vEQ_ssim tool: A utilty tool for objective quality measurements")
@@ -226,7 +270,17 @@ def main(argv=None):
     test_format = args.format
     reference_video = args.reference
     
+# ================================================   
+#     DATABASE SETUP
+# ==============================================
     vEQdb = DB.vEQ_database()
+    db =vEQdb.getDB()
+    cursor = db.cursor()
+    cursor.execute("CREATE TABLE if NOT exists video_quality_info (%s);" % vEQdb.VIDEO_QUALITY_COLS) 
+    
+#================================================================================================   
+#     DATABASE SETUP ENDS
+#================================================================================================
     
     if not validURLMatch(video) and not (os.access(video, os.R_OK)):
         print('Error: %s file not readable' % video)
@@ -251,7 +305,8 @@ def main(argv=None):
     else:
         LOCAL_VIDEO = True
 
-#     should get here even if it was a Youtubeurl as the video file should have been downloaded from Youtube etc  
+#     should get here even if it was a Youtubeurl as the video file 
+#      should have been downloaded from Youtube etc  
     if not validURLMatch(video) and (os.access(video, os.R_OK)):
         logging.debug("Found regular video")  
         codec, testvideo_width, testvideo_height = getLocalVideoInfo(video)
@@ -282,86 +337,93 @@ def main(argv=None):
             sys.exit()
             
 #         0.98834 
+
+    TESTING = True
     
-    commandx = ["tiny_ssim", reference_video_yuv, test_yuv_file, str(testvideo_width)+"x"+str(testvideo_height) ]
-    for it in commandx:
-        print it,
-    print " "
-#     http://blog.endpoint.com/2015/01/getting-realtime-output-using-python.html
-    '''
-    Calling Popen with universal_newlines=True because tiny_ssim 
-    ouputs each line with ^M newline character - which maybe makes sense only
-    on Windows or something, 
-    In any case, this causes problems if not set
-    '''    
-    p = Popen(commandx, env=ENV_DICT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)    
-#     out, err = p.communicate(input) //communicate() is potentially memory intensive
-   
-    output_arr=[]
-    while True: 
-        output = p.stdout.readline()
-        if output == '' and p.poll() is not None:
-            break
-        if output:
-            output_arr.append(output)
-            logging.info(output.strip())
+    if TESTING:
+        ssim_in = open( "out_ssim.txt", "rb" )
+        output_arr =  pickle.load(ssim_in)
+        ssim_arr = [] 
+        last_val = output_arr[-1]
+        tiny_ssim_results = re.split(r"[^\d.]+", last_val) 
+    else:
+        tiny_ssim_results = tiny_ssim(testvideo_width, testvideo_height, test_yuv_file, reference_video_yuv)
     
-#     save this ssim measurements to file
-#     st = datetime.datetime.fromtimestamp(ts).strftime('%Y%m%d%H%M%S')
-    ssim_outfile = open( "out_ssim.txt", "wb" )
-    pickle.dump(output_arr, ssim_outfile)
+    ypsnr = str(tiny_ssim_results[2])
+    apsnr = str(tiny_ssim_results[5])
+    yssim =  str(tiny_ssim_results[6])
+    assim = str(tiny_ssim_results[7])
+#     
+#     "id INTEGER PRIMARY KEY,"
+#                         "timestamp REAL, " 
+#                         "video TEXT, "
+#                         "url TEXT, "
+#                         "reference_videoname TEXT"
+#                         "metric1_ypsnr TEXT, "
+#                         "metric2_apsnr TEXT, "
+#                         "metric3_yssim TEXT, "
+#                         "metric4_assim TEXT, "
+#                         "metric5_other TEXT, "
+#                         "metric6_other TEXT, " 
+#                         "metric7_other TEXT, "
+#                         "metric8_other TEXT, "
+#                         "metric9_other TEXT, "
+#                         "metric10_other TEXT, "
     
-    ssim_arr = []
-#         Frame 1849 | PSNR Y:60.957  U:67.682  V:67.326  All:62.262 | SSIM Y:0.99984 U:0.99984 V:0.99982 All:0.99984 (37.96369)                
-#         Frame 1850 | PSNR Y:60.920  U:67.682  V:67.326  All:62.228 | SSIM Y:0.99984 U:0.99984 V:0.99982 All:0.99984 (37.94860)                
-#     last_val = 'Total 1851 frames | PSNR Y:45.039  U:52.712  V:52.995  All:46.454 | SSIM Y:0.98834 U:0.99602 V:0.99642 All:0.99096 (20.43960)\n'
-    last_val = output_arr[-1]
-    for it in output_arr:
-        ssim_arr.append(re.split(r"[^\d.]+",it)) 
-    print last_val 
-    avg_ssim =  re.split(r"[^\d.]+", last_val)
+    timestamp =   datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M%S')
+    values = [timestamp, video, video_url, reference_video ,ypsnr, apsnr, yssim, assim, 0,0,0,0,0,0 ] #15 vlues
     
-    print avg_ssim
-    print("AVG YPSNR: " + str(avg_ssim[2]))
-    print("AVG ALL PSNR: " + str(avg_ssim[5]))
-    print("AVG YSSIM: " + str(avg_ssim[6]))
-    print("AVG All SSIM: " + str(avg_ssim[7]))
+
+    retcode = cursor.execute("INSERT INTO video_quality_info VALUES (null,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", values)
+    db.commit()
+    print retcode
     
- 
 #         reference_video = getSourceVideoInfo(source)
                     
 if __name__ == '__main__':  
     TESTING = False
     if TESTING:
+        vEQdb = DB.vEQ_database(":memory:")
+        db =vEQdb.getDB()
+        cursor = db.cursor()
+        print vEQdb.VIDEO_QUALITY_COLS
+        cursor.execute("CREATE TABLE if NOT exists video_quality_info (%s);" % vEQdb.VIDEO_QUALITY_COLS) 
         ssim_in = open( "out_ssim.txt", "rb" )
         output_arr =  pickle.load(ssim_in)
         ssim_arr = []
-#         Frame 1849 | PSNR Y:60.957  U:67.682  V:67.326  All:62.262 | SSIM Y:0.99984 U:0.99984 V:0.99982 All:0.99984 (37.96369)                
-#         Frame 1850 | PSNR Y:60.920  U:67.682  V:67.326  All:62.228 | SSIM Y:0.99984 U:0.99984 V:0.99982 All:0.99984 (37.94860)                
+        #         Frame 1849 | PSNR Y:60.957  U:67.682  V:67.326  All:62.262 | SSIM Y:0.99984 U:0.99984 V:0.99982 All:0.99984 (37.96369)                
+        #         Frame 1850 | PSNR Y:60.920  U:67.682  V:67.326  All:62.228 | SSIM Y:0.99984 U:0.99984 V:0.99982 All:0.99984 (37.94860)                
         last_val = 'Total 1851 frames | PSNR Y:45.039  U:52.712  V:52.995  All:46.454 | SSIM Y:0.98834 U:0.99602 V:0.99642 All:0.99096 (20.43960)\n'
         last_val = output_arr[-1]
         
         for it in output_arr:
             ssim_arr.append(re.split(r"[^\d.]+",it)) 
-   
-        psnrs = zip(*ssim_arr)[2] 
-        print psnrs[0:-1]
+        
+        psnrs = zip(*ssim_arr)[1] 
+        print psnrs[0:-1][-1]
         import matplotlib.pyplot as plt
+        #         
+        #         plt.plot(psnrs[0:-1])
+        # #         plt.ylim(0.8,1)
+        #         plt.show()
+        tiny_ssim_results =  re.split(r"[^\d.]+", last_val)
         
-        plt.plot(psnrs[0:-1])
-#         plt.ylim(0.8,1)
-        plt.show()
-        avg_ssim =  re.split(r"[^\d.]+", last_val)
+        print("AVG YPSNR: " + str(tiny_ssim_results[2]))
+        print("AVG ALL PSNR: " + str(tiny_ssim_results[5]))
+        print("AVG YSSIM: " + str(tiny_ssim_results[6]))
+        print("AVG All SSIM: " + str(tiny_ssim_results[7]))
         
-        print("AVG YPSNR: " + str(avg_ssim[2]))
-        print("AVG ALL PSNR: " + str(avg_ssim[5]))
-        print("AVG YSSIM: " + str(avg_ssim[6]))
-        print("AVG All SSIM: " + str(avg_ssim[7]))
-        
+        timestamp =  st = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d%H%M%S')
+        values = [timestamp, "video", video_url, "reference_video" ,"ypsnr", "apsnr", "yssim", "assim", 0,0,0,0,0,0 ] #15 vlues
+    
+        cursor = db.cursor()    
+        cursor.execute("INSERT INTO video_quality_info VALUES (null,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", values)
+
         sys.exit()
+     
     else:
         main() 
-
+  
     
     
     
