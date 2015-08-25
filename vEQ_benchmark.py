@@ -102,7 +102,7 @@ def main(argv=None):
 
 #     make voltcraftmeter and any other meters callable somehow
     meter = VoltcraftMeter() 
-    
+  
 #    can inject dependency here i.e power meter or smc or bios or batterty
 #    meter_type = parser.parse_args().meter
 #    meter = Meter(meter_type)
