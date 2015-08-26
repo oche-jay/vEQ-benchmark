@@ -48,7 +48,6 @@ def makeDefaultDBFolder():
 vlc_verbosity = 3
 default_youtube_quality= 'bestvideo'
 benchmark_duration = 120#or -1 for length of video
-
 meter = None
 
 default_folder= makeDefaultDBFolder()
@@ -114,9 +113,9 @@ def main(argv=None):
     video_url = None
     online_video = False
         
-    if youtube_quality is None:
-        youtube_quality = default_youtube_quality
-        
+#     if youtube_quality is None:
+#         youtube_quality = default_youtube_quality
+#         
     if db_loc is None:
         db_loc = default_database
    
@@ -145,13 +144,12 @@ def main(argv=None):
     values = [start_time,os_info,cpu, gpu,specs]
     sys_info_index = vEQdb.insertIntoSysInfoTable(values)
     
-
-#     real_main(video)
-# def real_main(video):
     if ("http" or "www") not in video and not (os.access(video, os.R_OK)):
         print('Error: %s file not readable' % video)
         logging.error('Error: %s file not readable' % video)
         sys.exit(1)
+    
+    
     try: 
         if ("http" or "www") not in video: 
             logging.debug("Found regular video")  
@@ -216,7 +214,7 @@ def main(argv=None):
     
 #  ================  VLC VIDEO SPECIFIC =============== 
     
-    
+    vlc_args = "--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq " + "--verbose " + str(vlc_verbosity)
     vEQPlayback = vlc.VLCPlayback(video,vEQdb,vlc_args,meter)
     
     logging.debug("Starting playback now")
@@ -287,16 +285,13 @@ def main(argv=None):
     print "Disk Info: " + "Not Yet Implemented"
     print "Active NIC Info: " + "Not Yet Implemented"
     print "============================================="
-    
 #     to_plot = True
 #     to_show = False
- 
 #     TODO implemtent GPU monitoring    
     gpus=None
     plot_title = str(video_codec) + "- (" + str(video_title) + ")"
     if to_plot:
         makeSubPlot(start_time=start_time, figure_title=plot_title, cpus=cpus, memorys=memorys, bitrate=bitrate, powers=powers, gpus=gpus, to_show=to_show)
-
 
 if __name__ == '__main__':
     main()
