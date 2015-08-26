@@ -867,9 +867,9 @@ class VideoCleanupCb(ctypes.c_void_p):
 class AudioPlayCb(ctypes.c_void_p):
     """Callback prototype for audio playback.
 \param data data pointer as passed to L{libvlc_audio_set_callbacks}() [IN]
-\param samples pointer to the first audio sample to start back [IN]
-\param count number of audio samples to start back
-\param pts expected start time stamp (see libvlc_delay())
+\param samples pointer to the first audio sample to play back [IN]
+\param count number of audio samples to play back
+\param pts expected play time stamp (see libvlc_delay())
     """
     pass
 class AudioPauseCb(ctypes.c_void_p):
@@ -1004,9 +1004,9 @@ in the video decoders, video filters and/or video converters.
     AudioPlayCb = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_uint, ctypes.c_int64)
     AudioPlayCb.__doc__ = '''Callback prototype for audio playback.
 \param data data pointer as passed to L{libvlc_audio_set_callbacks}() [IN]
-\param samples pointer to the first audio sample to start back [IN]
-\param count number of audio samples to start back
-\param pts expected start time stamp (see libvlc_delay())
+\param samples pointer to the first audio sample to play back [IN]
+\param count number of audio samples to play back
+\param pts expected play time stamp (see libvlc_delay())
     ''' 
     AudioPauseCb = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int64)
     AudioPauseCb.__doc__ = '''Callback prototype for audio pause.
@@ -1420,7 +1420,7 @@ class Instance(_Ctype):
     def media_player_new(self, uri=None):
         """Create a new MediaPlayer instance.
 
-        @param uri: an optional URI to start in the player.
+        @param uri: an optional URI to play in the player.
         """
         p = libvlc_media_player_new(self)
         if uri:
@@ -1957,7 +1957,7 @@ class Media(_Ctype):
 
     def tracks_get(self):
         """Get media descriptor's elementary streams description
-        Note, you need to call L{parse}() or start the media at least once
+        Note, you need to call L{parse}() or play the media at least once
         before calling this function.
         Not doing this will result in an empty array.
         The result must be freed with L{tracks_release}.
@@ -2502,7 +2502,7 @@ class MediaListPlayer(_Ctype):
         return libvlc_media_list_player_set_media_list(self, p_mlist)
 
     
-    def start(self):
+    def play(self):
         '''Play media list.
         '''
         return libvlc_media_list_player_play(self)
@@ -2530,7 +2530,7 @@ class MediaListPlayer(_Ctype):
     
     def play_item_at_index(self, i_index):
         '''Play media list item at position index.
-        @param i_index: index in media list to start.
+        @param i_index: index in media list to play.
         @return: 0 upon success -1 if the item wasn't found.
         '''
         return libvlc_media_list_player_play_item_at_index(self, i_index)
@@ -2607,7 +2607,7 @@ class MediaPlayer(_Ctype):
         return self._instance  #PYCHOK expected
 
     def set_mrl(self, mrl, *options):
-        """Set the MRL to start.
+        """Set the MRL to play.
 
         @param mrl: The MRL
         @param options: optional media option=value strings
@@ -2754,7 +2754,7 @@ class MediaPlayer(_Ctype):
         return libvlc_media_player_is_playing(self)
 
     
-    def start(self):
+    def play(self):
         '''Play.
         @return: 0 if playback started (and was already started), or -1 on error.
         '''
@@ -2763,7 +2763,7 @@ class MediaPlayer(_Ctype):
     
     def set_pause(self, do_pause):
         '''Pause or resume (no effect if there is no media).
-        @param do_pause: start/resume if zero, pause if non-zero.
+        @param do_pause: play/resume if zero, pause if non-zero.
         @version: LibVLC 1.1.1 or later.
         '''
         return libvlc_media_player_set_pause(self, do_pause)
@@ -2901,11 +2901,11 @@ class MediaPlayer(_Ctype):
         return libvlc_media_player_get_hwnd(self)
 
     
-    def audio_set_callbacks(self, start, pause, resume, flush, drain, opaque):
+    def audio_set_callbacks(self, play, pause, resume, flush, drain, opaque):
         '''Set callbacks and private data for decoded audio.
         Use L{audio_set_format}() or L{audio_set_format_callbacks}()
         to configure the decoded audio format.
-        @param start: callback to start audio samples (must not be NULL).
+        @param play: callback to play audio samples (must not be NULL).
         @param pause: callback to pause playback (or NULL to ignore).
         @param resume: callback to resume playback (or NULL to ignore).
         @param flush: callback to flush audio buffers (or NULL to ignore).
@@ -2913,7 +2913,7 @@ class MediaPlayer(_Ctype):
         @param opaque: private pointer for the audio callbacks (as first parameter).
         @version: LibVLC 2.0.0 or later.
         '''
-        return libvlc_audio_set_callbacks(self, start, pause, resume, flush, drain, opaque)
+        return libvlc_audio_set_callbacks(self, play, pause, resume, flush, drain, opaque)
 
     
     def audio_set_volume_callback(self, set_volume):
@@ -2989,7 +2989,7 @@ class MediaPlayer(_Ctype):
     
     def set_chapter(self, i_chapter):
         '''Set video chapter (if applicable).
-        @param i_chapter: chapter number to start.
+        @param i_chapter: chapter number to play.
         '''
         return libvlc_media_player_set_chapter(self, i_chapter)
 
@@ -3009,7 +3009,7 @@ class MediaPlayer(_Ctype):
 
     
     def will_play(self):
-        '''Is the player able to start.
+        '''Is the player able to play.
         @return: boolean \libvlc_return_bool.
         '''
         return libvlc_media_player_will_play(self)
@@ -3025,7 +3025,7 @@ class MediaPlayer(_Ctype):
     
     def set_title(self, i_title):
         '''Set video title.
-        @param i_title: title number to start.
+        @param i_title: title number to play.
         '''
         return libvlc_media_player_set_title(self, i_title)
 
@@ -3057,17 +3057,17 @@ class MediaPlayer(_Ctype):
 
     
     def get_rate(self):
-        '''Get the requested video start rate.
+        '''Get the requested video play rate.
         @warning: Depending on the underlying media, the requested rate may be
         different from the real playback rate.
-        @return: video start rate.
+        @return: video play rate.
         '''
         return libvlc_media_player_get_rate(self)
 
     
     def set_rate(self, rate):
-        '''Set video start rate.
-        @param rate: video start rate to set.
+        '''Set video play rate.
+        @param rate: video play rate to set.
         @return: -1 if an error was detected, 0 otherwise (but even then, it might not actually work depending on the underlying media protocol).
         '''
         return libvlc_media_player_set_rate(self, rate)
@@ -4248,7 +4248,7 @@ def libvlc_media_get_user_data(p_md):
 
 def libvlc_media_tracks_get(p_md, tracks):
     '''Get media descriptor's elementary streams description
-    Note, you need to call L{libvlc_media_parse}() or start the media at least once
+    Note, you need to call L{libvlc_media_parse}() or play the media at least once
     before calling this function.
     Not doing this will result in an empty array.
     @param p_md: media descriptor object.
@@ -4701,7 +4701,7 @@ def libvlc_media_list_player_get_state(p_mlp):
 def libvlc_media_list_player_play_item_at_index(p_mlp, i_index):
     '''Play media list item at position index.
     @param p_mlp: media list player instance.
-    @param i_index: index in media list to start.
+    @param i_index: index in media list to play.
     @return: 0 upon success -1 if the item wasn't found.
     '''
     f = _Cfunctions.get('libvlc_media_list_player_play_item_at_index', None) or \
@@ -4856,7 +4856,7 @@ def libvlc_media_player_play(p_mi):
 def libvlc_media_player_set_pause(mp, do_pause):
     '''Pause or resume (no effect if there is no media).
     @param mp: the Media Player.
-    @param do_pause: start/resume if zero, pause if non-zero.
+    @param do_pause: play/resume if zero, pause if non-zero.
     @version: LibVLC 1.1.1 or later.
     '''
     f = _Cfunctions.get('libvlc_media_player_set_pause', None) or \
@@ -5044,12 +5044,12 @@ def libvlc_media_player_get_hwnd(p_mi):
                     ctypes.c_void_p, MediaPlayer)
     return f(p_mi)
 
-def libvlc_audio_set_callbacks(mp, start, pause, resume, flush, drain, opaque):
+def libvlc_audio_set_callbacks(mp, play, pause, resume, flush, drain, opaque):
     '''Set callbacks and private data for decoded audio.
     Use L{libvlc_audio_set_format}() or L{libvlc_audio_set_format_callbacks}()
     to configure the decoded audio format.
     @param mp: the media player.
-    @param start: callback to start audio samples (must not be NULL).
+    @param play: callback to play audio samples (must not be NULL).
     @param pause: callback to pause playback (or NULL to ignore).
     @param resume: callback to resume playback (or NULL to ignore).
     @param flush: callback to flush audio buffers (or NULL to ignore).
@@ -5060,7 +5060,7 @@ def libvlc_audio_set_callbacks(mp, start, pause, resume, flush, drain, opaque):
     f = _Cfunctions.get('libvlc_audio_set_callbacks', None) or \
         _Cfunction('libvlc_audio_set_callbacks', ((1,), (1,), (1,), (1,), (1,), (1,), (1,),), None,
                     None, MediaPlayer, AudioPlayCb, AudioPauseCb, AudioResumeCb, AudioFlushCb, AudioDrainCb, ctypes.c_void_p)
-    return f(mp, start, pause, resume, flush, drain, opaque)
+    return f(mp, play, pause, resume, flush, drain, opaque)
 
 def libvlc_audio_set_volume_callback(mp, set_volume):
     '''Set callbacks and private data for decoded audio. This only works in
@@ -5160,7 +5160,7 @@ def libvlc_media_player_set_position(p_mi, f_pos):
 def libvlc_media_player_set_chapter(p_mi, i_chapter):
     '''Set video chapter (if applicable).
     @param p_mi: the Media Player.
-    @param i_chapter: chapter number to start.
+    @param i_chapter: chapter number to play.
     '''
     f = _Cfunctions.get('libvlc_media_player_set_chapter', None) or \
         _Cfunction('libvlc_media_player_set_chapter', ((1,), (1,),), None,
@@ -5188,7 +5188,7 @@ def libvlc_media_player_get_chapter_count(p_mi):
     return f(p_mi)
 
 def libvlc_media_player_will_play(p_mi):
-    '''Is the player able to start.
+    '''Is the player able to play.
     @param p_mi: the Media Player.
     @return: boolean \libvlc_return_bool.
     '''
@@ -5211,7 +5211,7 @@ def libvlc_media_player_get_chapter_count_for_title(p_mi, i_title):
 def libvlc_media_player_set_title(p_mi, i_title):
     '''Set video title.
     @param p_mi: the Media Player.
-    @param i_title: title number to start.
+    @param i_title: title number to play.
     '''
     f = _Cfunctions.get('libvlc_media_player_set_title', None) or \
         _Cfunction('libvlc_media_player_set_title', ((1,), (1,),), None,
@@ -5257,11 +5257,11 @@ def libvlc_media_player_next_chapter(p_mi):
     return f(p_mi)
 
 def libvlc_media_player_get_rate(p_mi):
-    '''Get the requested video start rate.
+    '''Get the requested video play rate.
     @warning: Depending on the underlying media, the requested rate may be
     different from the real playback rate.
     @param p_mi: the Media Player.
-    @return: video start rate.
+    @return: video play rate.
     '''
     f = _Cfunctions.get('libvlc_media_player_get_rate', None) or \
         _Cfunction('libvlc_media_player_get_rate', ((1,),), None,
@@ -5269,9 +5269,9 @@ def libvlc_media_player_get_rate(p_mi):
     return f(p_mi)
 
 def libvlc_media_player_set_rate(p_mi, rate):
-    '''Set video start rate.
+    '''Set video play rate.
     @param p_mi: the Media Player.
-    @param rate: video start rate to set.
+    @param rate: video play rate to set.
     @return: -1 if an error was detected, 0 otherwise (but even then, it might not actually work depending on the underlying media protocol).
     '''
     f = _Cfunctions.get('libvlc_media_player_set_rate', None) or \
@@ -6786,10 +6786,10 @@ if __name__ == '__main__':
             player.set_xwindow(vlcWidget.winId())
             has_own_widget = True
          
-        player.start()
+        player.play()
         
         # Some marquee examples.  Marquee requires '--sub-source marq' in the
-        # Instance() call above.  See <http://www.videolan.org/doc/start-howto/en/ch04.html>
+        # Instance() call above.  See <http://www.videolan.org/doc/play-howto/en/ch04.html>
         player.video_set_marquee_int(VideoMarqueeOption.Enable, 1)
         player.video_set_marquee_int(VideoMarqueeOption.Size, 70)  # pixels
 #         player.video_set_marquee_int(VideoMarqueeOption.Position, Position.BottomRight)
