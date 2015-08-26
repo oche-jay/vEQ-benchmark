@@ -36,7 +36,6 @@ import videoInput.veqplayback as vlc
 from powermonitor.voltcraftmeter import VoltcraftMeter
 # TODO: Set logging level from argument
 
-
 vlc_verbosity = -1
 default_youtube_quality= 'bestvideo'
 benchmark_duration = 120#or -1 for length of video
@@ -83,15 +82,16 @@ def main(argv=None):
     parser.add_argument("-p" , "--power-meter", metavar="meter", dest="meter", help="The meter to use for power measurement TODO: Expand this")
     parser.add_argument("-d", "--duration", metavar="Duration", dest="benchmark_duration", default=120, type=int, help="The length of time in seconds for the benchmark to run.")
     parser.add_argument("-l", "--databse-location", dest="db_loc", metavar ="location for database file or \'memory\'", help = "A absolute location for storing the database file ")
-    parser.add_argument("-P", "--Plot", dest="to_plot")
-    
+    parser.add_argument('-P', "--Plot", dest='to_plot', action='store_true')
+    parser.add_argument('-S', "--Show", dest='to_show', action='store_true')
     args = parser.parse_args()
     
     video = args.video
     benchmark_duration = args.benchmark_duration
     youtube_quality =args.youtube_quality
     db_loc = args.db_loc
-    
+    to_plot = args.to_plot
+    to_show = args.to_show
     
     video_title = None
     video_data = None
@@ -106,20 +106,18 @@ def main(argv=None):
         youtube_quality = default_youtube_quality
         
     if db_loc is None:
-       db_loc = default_database
+        db_loc = default_database
    
-    to_plot = False
+
     vlc_args = "--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq " + "--verbose " + str(vlc_verbosity)
     
     logging.info("Started VEQ_Benchmark")
 
 #   make voltcraftmeter and any other meters callable somehow
-    meter = VoltcraftMeter() 
-    
+    meter = VoltcraftMeter()    
 #    can inject dependency here i.e power meter or smc or bios or batterty
 #    meter_type = parser.parse_args().meter
 #    meter = Meter(meter_type)
-
     if meter is None:
         logging.warning("device wasn't found") 
     elif meter.initDevice() is None:
@@ -276,8 +274,8 @@ def main(argv=None):
     print "Active NIC Info: " + "Not Yet Implemented"
     print "============================================="
     
-    to_plot = False
-    to_show = False
+#     to_plot = True
+#     to_show = False
  
 #     TODO implemtent GPU monitoring    
     gpus=None
