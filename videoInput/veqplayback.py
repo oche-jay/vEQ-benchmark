@@ -250,6 +250,8 @@ class  VLCPlayback:
                 sent_now = psutil.net_io_counters().bytes_sent
                 recv_now = psutil.net_io_counters().bytes_recv
        
+#                 datetime.datetime.fromtimestamp(time.time())).strftime('%Y%m%d%H%M%S')
+                           
                 values = [timestamp, cpu_val, mempercent_val, rss, sent_now, recv_now, io_read, io_write, sys_index_FK, video_index_FK]
                 powers = [timestamp,power_v,sys_index_FK, video_index_FK] 
                 self.db.insertIntoReadingsTable(values)
