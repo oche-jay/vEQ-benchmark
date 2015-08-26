@@ -16,6 +16,7 @@ __version__ = '1.4.1'
 
 ENV_DICT = os.environ
 PATH_TO_MEDIAINFO = "C:/MediaInfo" #Put this in a seperate PREFS class or something
+PATH_TO_MEDIAINFO = "/usr/local/bin/MediaInfo"
 
 
 class Track(object):

@@ -16,7 +16,7 @@ def plot(alist, title=None, filename=None, show=False):
     plt.ylabel(title)
     if not os.path.exists("plots"): 
             os.makedirs("plots")
-    plt.savefig("plots/" + str(filename) + ".jpg")
+    plt.savefig("plots/" + str(filename) + ".eps")
       
     if show:
         plt.show()
@@ -85,7 +85,7 @@ def makeSubPlot(start_time=None, figure_title=None, powers=None, cpus=None, memo
                 figure_title = "vEQ-benchmark Generic File"
             figure_title = re.sub(r"[^\w\s]", '', figure_title)
             filename = str(start_time) + "_" + re.sub(r"\s+", '_', figure_title)
-        plt.savefig("plots/" + str(filename) + ".eps") 
+        plt.savefig("plots/" + str(filename) + ".pdf") 
         
     if to_show:
         plt.show()

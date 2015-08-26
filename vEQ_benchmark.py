@@ -13,6 +13,7 @@ import logging
 import json
 import numpy
 from plotter import makeSubPlot
+from os.path import expanduser
 
 from decimal import *
 getcontext().prec = 3
@@ -36,13 +37,24 @@ import videoInput.veqplayback as vlc
 from powermonitor.voltcraftmeter import VoltcraftMeter
 # TODO: Set logging level from argument
 
-vlc_verbosity = -1
+def makeDefaultDBFolder():
+    home = expanduser("~")
+    print home
+    video_download_folder = os.path.join(home, "vEQ-benchmark")
+    if not os.path.exists(video_download_folder):
+        os.makedirs(video_download_folder)
+    return video_download_folder
+
+vlc_verbosity = 3
 default_youtube_quality= 'bestvideo'
 benchmark_duration = 120#or -1 for length of video
-meter = None
-default_database = "../vEQ_db.sqlite"
 
-logging.getLogger().setLevel(logging.ERROR)
+meter = None
+
+default_folder= makeDefaultDBFolder()
+default_database = os.path.join( default_folder, "vEQ_db.sqlite")
+
+logging.getLogger().setLevel(logging.DEBUG)
 
 # Some available Formats for Youtube
 # format code  extension  resolution note
@@ -81,18 +93,18 @@ def main(argv=None):
     parser.add_argument("-y" , "--youtube-format", metavar="format", dest="youtube_quality", default=default_youtube_quality, help="For Youtube videos, a value that corressponds to the quality level see youtube-dl for details")
     parser.add_argument("-p" , "--power-meter", metavar="meter", dest="meter", help="The meter to use for power measurement TODO: Expand this")
     parser.add_argument("-d", "--duration", metavar="Duration", dest="benchmark_duration", default=120, type=int, help="The length of time in seconds for the benchmark to run.")
-    parser.add_argument("-l", "--databse-location", dest="db_loc", metavar ="location for database file or \'memory\'", help = "A absolute location for storing the database file ")
-    parser.add_argument('-P', "--Plot", dest='to_plot', action='store_true')
-    parser.add_argument('-S', "--Show", dest='to_show', action='store_true')
-    args = parser.parse_args()
-    
+    parser.add_argument("-D", "--Database-location", dest="db_loc", metavar ="location for database file or \'memory\'", help = "A absolute location for storing the database file ")
+    parser.add_argument("-P", "--plot", dest="to_plot", action='store_true', help="Flag to set if this session should be plotted")
+    parser.add_argument("-S", "--show", dest="to_show", action='store_true', help="Flag to set if this session should be displayed on the screen after a session is completed")
+
+    args = parser.parse_args()    
     video = args.video
     benchmark_duration = args.benchmark_duration
     youtube_quality =args.youtube_quality
     db_loc = args.db_loc
-    to_plot = args.to_plot
     to_show = args.to_show
-    
+    to_plot = args.to_plot
+        
     video_title = None
     video_data = None
     video_codec = None
@@ -101,16 +113,14 @@ def main(argv=None):
     file_size = None
     video_url = None
     online_video = False
-    
+        
     if youtube_quality is None:
         youtube_quality = default_youtube_quality
         
     if db_loc is None:
         db_loc = default_database
    
-
     vlc_args = "--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq " + "--verbose " + str(vlc_verbosity)
-    
     logging.info("Started VEQ_Benchmark")
 
 #   make voltcraftmeter and any other meters callable somehow
@@ -204,10 +214,14 @@ def main(argv=None):
     video_values = [start_time,video,video_data,video_codec,video_width,video_height] 
     video_index = vEQdb.insertIntoVideoInfoTable(video_values)
     
-    vlcPlayback = vlc.VEQPlayback(video,vEQdb,vlc_args,meter)
+#  ================  VLC VIDEO SPECIFIC =============== 
+    
+    
+    vEQPlayback = vlc.VLCPlayback(video,vEQdb,vlc_args,meter)
+    
     logging.debug("Starting playback now")
     
-    vlcPlayback.play(benchmark_duration)
+    vEQPlayback.start(benchmark_duration)
 
     end_time = time.time()
   

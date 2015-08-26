@@ -53,7 +53,7 @@ class Test(unittest.TestCase):
 
     def testInsertintoSummaryTable(self):
         print self.tdb
-        values = [  "1431824413.343" ,   "43.1"  , " ", " ",  " ", " ", "1.1322905470656"   , "193830912" ,   "98136216",    "1458167781" ,   "11763736"  ,  "412066" ,   "1"   , "1"]
+        values = [ "1431824413.343" ,   "43.1"  , " ", " ",  " ", " ", "1.1322905470656"   , "193830912" ,   "98136216",    "1458167781" ,   "11763736"  ,  "412066" ,   "1"   , "1"]
         retval = self.tdb.insertIntoVEQSummaryTable(values)
         self.assertEqual(retval,1)
         cursor = self.tdb.getDB().cursor()

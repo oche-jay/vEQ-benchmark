@@ -32,7 +32,7 @@ class VoltcraftMeter():
                         print count, "Break "
                         break 
                     count += 1 
-                outputstring = self.get_device_reading()
+                outputstring = self.getReading()
                 print str(outputstring) + " W"
             if hid_device:
                 hid_device.close()
@@ -90,7 +90,7 @@ class VoltcraftMeter():
                 return None
         
     
-    def get_device_reading(self):
+    def getReading(self):
         '''
         Reads the Device and returns a string representing the reading
         This can take up to form 0.012s - 1 sec if everything is working well

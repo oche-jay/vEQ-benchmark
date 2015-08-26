@@ -2,6 +2,26 @@ import logging
 import numpy
 from scipy import stats
 import sys
+import re
+import logging
+
+def validURLMatch(string_url):
+    #See: http://daringfireball.net/2010/07/improved_regex_for_matching_urls
+    '''
+    Simple util to check if a string is a valid url
+    '''
+    GRUBER_URLINTEXT_PAT = re.compile(ur'(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:\'".,<>?\xab\xbb\u201c\u201d\u2018\u2019]))')
+    result =  GRUBER_URLINTEXT_PAT.search(string_url)
+    return result
+
+def validYoutubeURLMatch(string_url):
+    '''
+    Simple regex util to match youtube vids
+    '''
+    youtube_url_pattern = re.compile(ur'((http://)?)(www\.)?((youtube\.com/)|(youtu.be)|(youtube)).+')
+    result = youtube_url_pattern.search(string_url)
+    logging.debug("Youtube URL found")
+    return result
 
 def cleanResults(a_list,threshold=None):
     '''
