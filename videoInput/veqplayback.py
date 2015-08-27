@@ -228,10 +228,11 @@ class  VLCPlayback:
                 #                 try to resize the playback window
                 if self.vlc_playback_object.resized is False:
                     window_size = player.video_get_size(0)
-                    print str(window_size) +"XXXxxxxxxxxx"
+
                     if window_size[0] and window_size[1] > 479:
                         logging.info("Maximizing window " + str(window_size))
                         self.vlc_playback_object.vlcWidget.showMaximized()
+                        self.vlc_playback_object.resize = True
 #                         This is crashing on the Mac
                         self.vlc_playback_object.resize = True  
                     elif window_size[0] and window_size[1] > 10:
