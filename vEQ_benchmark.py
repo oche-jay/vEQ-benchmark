@@ -14,6 +14,7 @@ import json
 import numpy
 from plotter import makeSubPlot
 from os.path import expanduser
+from util import validURLMatch, validYoutubeURLMatch
 
 from decimal import *
 getcontext().prec = 3
@@ -33,7 +34,8 @@ from util import getMean
 from youtube_dl import YoutubeDL
 import database.vEQ_database as DB
 import processmonitor.processMonitor as procmon
-import videoInput.veqplayback as vlc
+
+
 from powermonitor.voltcraftmeter import VoltcraftMeter
 # TODO: Set logging level from argument
 
@@ -90,12 +92,14 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description="vEQ-benchmark: A Benchmarking and Measurement Tool for Video")
     parser.add_argument("video" , metavar="VIDEO", help="A local file or URL(Youtube, Vimeo etc.) for the video to be benchmarked")
     parser.add_argument("-y" , "--youtube-format", metavar="format", dest="youtube_quality", default=default_youtube_quality, help="For Youtube videos, a value that corressponds to the quality level see youtube-dl for details")
-    parser.add_argument("-p" , "--power-meter", metavar="meter", dest="meter", help="The meter to use for power measurement TODO: Expand this")
+    parser.add_argument("-m" , "--power-meter", metavar="meter", dest="meter", default='voltcraft',   help="The meter to use for power measurement TODO: Expand this")
     parser.add_argument("-d", "--duration", metavar="Duration", dest="benchmark_duration", default=120, type=int, help="The length of time in seconds for the benchmark to run.")
     parser.add_argument("-D", "--Database-location", dest="db_loc", metavar ="location for database file or \'memory\'", help = "A absolute location for storing the database file ")
     parser.add_argument("-P", "--plot", dest="to_plot", action='store_true', help="Flag to set if this session should be plotted")
-    parser.add_argument("-S", "--show", dest="to_show", action='store_true', help="Flag to set if this session should be displayed on the screen after a session is completed")
-
+    parser.add_argument("-S", "--show", dest="to_show", action='store_true', help="Flag to set if the plot of this should be displayed on the screen after a session is completed")
+    parser.add_argument("-p","--player", metavar="player", dest="system_player", default="vlc", help="The Player to use to playback video - default is VLC MediaPlayer")
+    
+#     TODO: implement dynamic power metering VoltcraftMeter
     args = parser.parse_args()    
     video = args.video
     benchmark_duration = args.benchmark_duration
@@ -103,7 +107,10 @@ def main(argv=None):
     db_loc = args.db_loc
     to_show = args.to_show
     to_plot = args.to_plot
-        
+    m = args.meter
+    system_player = args.system_player
+    
+    
     video_title = None
     video_data = None
     video_codec = None
@@ -112,30 +119,32 @@ def main(argv=None):
     file_size = None
     video_url = None
     online_video = False
-        
-#     if youtube_quality is None:
-#         youtube_quality = default_youtube_quality
-#         
+
     if db_loc is None:
         db_loc = default_database
-   
-    vlc_args = "--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq " + "--verbose " + str(vlc_verbosity)
+    
     logging.info("Started VEQ_Benchmark")
-
-#   make voltcraftmeter and any other meters callable somehow
-    meter = VoltcraftMeter()    
+    
+    implementedPowerMeters = {
+                              "voltcraft": VoltcraftMeter()
+                            }
+    meter = implementedPowerMeters.get(m,None) 
+    
 #    can inject dependency here i.e power meter or smc or bios or batterty
 #    meter_type = parser.parse_args().meter
 #    meter = Meter(meter_type)
-    if meter is None:
-        logging.warning("device wasn't found") 
-    elif meter.initDevice() is None:
-        logging.warning("device wasn't found") 
-    
 
+    if meter is None:
+        logging.warning("No power monitoring device found") 
+        
+    elif meter.initDevice() is None:
+        meter = None
+        logging.warning("No power monitoring device found") 
+    
     vEQdb = DB.vEQ_database(db_loc)
     vEQdb.initDB()
     start_time = time.time()
+    
     cpu = procmon.get_processor()
     os_info = procmon.get_os()
     gpu = procmon.get_gpu()
@@ -144,15 +153,14 @@ def main(argv=None):
     values = [start_time,os_info,cpu, gpu,specs]
     sys_info_index = vEQdb.insertIntoSysInfoTable(values)
     
-    if ("http" or "www") not in video and not (os.access(video, os.R_OK)):
+    if not validURLMatch(video) and not (os.access(video, os.R_OK)):
         print('Error: %s file not readable' % video)
         logging.error('Error: %s file not readable' % video)
         sys.exit(1)
-    
-    
+     
     try: 
-        if ("http" or "www") not in video: 
-            logging.debug("Found regular video")  
+        if not validURLMatch(video): 
+            logging.debug("Found regular video - using MediaInfo to extract details")  
             video_url = video
             video_info = MediaInfo.parse(video)
             video_data = video_info.to_json()
@@ -162,11 +170,11 @@ def main(argv=None):
                     video_codec = track.codec
                     video_height = track.height
                     video_width = track.width
-        elif ("http" or "www" in video):
+        elif validURLMatch(video):
             online_video = True
             logging.debug("Found online video: Using youtube-dl to get information")
-            if "yout" or "goog" in video:
-                logging.debug("Found online video: Using youtube-dl to get information")
+            if validYoutubeURLMatch(video):
+                logging.debug("Found YouTube video: Using Youtube-dl to get information")
                 youtube_dl_opts = {
                          'format' : youtube_quality,
                          'quiet' : True
@@ -213,23 +221,36 @@ def main(argv=None):
     video_index = vEQdb.insertIntoVideoInfoTable(video_values)
     
 #  ================  VLC VIDEO SPECIFIC =============== 
+    if system_player == "vlc":
+        from videoInput.veqplayback import VLCPlayback
+        vlc_args = "--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq " + "--verbose " + str(vlc_verbosity)
+        vEQPlayback = VLCPlayback(video,vEQdb,vlc_args,meter)
     
-    vlc_args = "--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq " + "--verbose " + str(vlc_verbosity)
-    vEQPlayback = vlc.VLCPlayback(video,vEQdb,vlc_args,meter)
+        logging.debug("Starting Playback with VLC")
     
-    logging.debug("Starting playback now")
+        vEQPlayback.startPlayback(benchmark_duration)
     
-    vEQPlayback.start(benchmark_duration)
-
-    end_time = time.time()
-  
-    total_duration = end_time - start_time
+        end_time = time.time()
+        total_duration = end_time - start_time
+   
+    else:
+#         use subprocess to start video player and montioring!
+        GenericPlaybackObject.startPlayback(benchmarkduration)
+        pass
     
     powers = vEQdb.getValuesFromPowerTable(start_time, end_time)
     cpus = vEQdb.getCPUValuesFromPSTable(start_time, end_time)
     memorys = vEQdb.getMemValuesFromPSTable(start_time, end_time)
     net_r = vEQdb.getValuesFromPSTable("net_recv", start_time, end_time) 
-    data_transferred = net_r[-1] - net_r[0]
+    
+    print memorys
+    print net_r
+    
+    try:
+        data_transferred = net_r[-1] - net_r[0]
+    except IndexError:
+        logging.error("Something went wrong with collecting networking data")
+        data_transferred = 0
 
     '''
     http://stackoverflow.com/questions/4029436/subtracting-the-current-and-previous-item-in-a-list 

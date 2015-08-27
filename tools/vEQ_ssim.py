@@ -174,7 +174,7 @@ def downloadAndRenameVideo(video, video_download_folder, **kwargs):
     Downloads a video using Youtube-dl and renames it to a conisintent filename
     """
     if not kwargs["quality"]:
-        logging.warn("No Qualuty level specified, will use youtube-dl best quality")    
+        logging.warn("No Quality level specified, will use youtube-dl best quality")    
     quality = kwargs.get('quality',"best") #18 for youtube is h264, mp, 360p
     youtube_dl_opts = {
                        'outtmpl':video_download_folder + '/%(resolution)s-%(format_id)s-%(title)s-%(id)s.%(ext)s',
@@ -270,18 +270,19 @@ def main(argv=None):
     test_format = args.format
     reference_video = args.reference
     
-# ================================================   
-#     DATABASE SETUP
-# ==============================================
+# ================================================================================================ #  
+#     DATABASE SETUP  
+# ================================================================================================ #  
+
     vEQdb = DB.vEQ_database()
     db =vEQdb.getDB()
     cursor = db.cursor()
     cursor.execute("CREATE TABLE if NOT exists video_quality_info (%s);" % vEQdb.VIDEO_QUALITY_COLS) 
     
-#================================================================================================   
-#     DATABASE SETUP ENDS
-#================================================================================================
-    
+# ================================================================================================ #  
+#     DATABASE SETUP ENDS 
+# ================================================================================================ #  
+
     if not validURLMatch(video) and not (os.access(video, os.R_OK)):
         print('Error: %s file not readable' % video)
         logging.error('Error: %s file not readable' % video)

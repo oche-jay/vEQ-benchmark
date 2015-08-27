@@ -11,36 +11,18 @@ import sys
 import traceback
 import time
 import logging
+from powermonitor.PowerMeter import PowerMeter
 
 PROFILE = False
 PROFILE_DURATION = 0 # (20 takes about 1 sec)
 BAUD_SPEED = int(9600)
 
 # TODO: Make a parent class for all types of energymeter
-class VoltcraftMeter():
+class VoltcraftMeter(PowerMeter):
     logging.debug("Initializing Voltcraft VC 870 meter")
     hid_device = None
     
-    def main(self,argv=None):
-        try:
-            hid_device = self.initDevice()
-            count = 0
-            while True and hid_device:
-                if PROFILE:
-                    logging.debug("Profiling ON")
-                    if (count == (PROFILE_DURATION + 1) ):
-                        print count, "Break "
-                        break 
-                    count += 1 
-                outputstring = self.getReading()
-                print str(outputstring) + " W"
-            if hid_device:
-                hid_device.close()
-    
-        except Exception as e:
-            print e
-            traceback.print_exc(e)
-    
+
     def initDevice(self):
         ''' 
         Open and return the VC870 Hid device
@@ -65,8 +47,9 @@ class VoltcraftMeter():
         try:
             self.hid_device = hid.device()
             dev = hid.enumerate(0x1a86, 0xe008)
+            logging.debug("Hid device at :" + str(dev))
            
-            if dev:
+            if len(dev) > 0:
                 self.hid_device.open(0x1a86, 0xe008)
            
                 bps = BAUD_SPEED         
@@ -121,7 +104,7 @@ class VoltcraftMeter():
                         for i in xrange(0,length):
                             val = res[i+1] & 0x7f #bitwise and with 0111 1111, mask the upper bit which is always 1
                             currentchar = hex(val)[-1]                       
-        #                     
+                          
                             if currentchar == "d":
                                 prevchar = currentchar
                                 continue
@@ -135,7 +118,7 @@ class VoltcraftMeter():
         
         else:
             logging.warning("No device detected")
-            return -1 #should never get here
+            return -1
     
     def processPowerOutputString(self,outputstring):
         vc_function = outputstring[0:2]
@@ -152,7 +135,26 @@ class VoltcraftMeter():
         except Exception as e:
             sys.stderr.write(e)
             return None
-                
+        
+    def main(self,argv=None):
+        try:
+            hid_device = self.initDevice()
+            count = 0
+            while True and hid_device:
+                if PROFILE:
+                    logging.debug("Profiling ON")
+                    if (count == (PROFILE_DURATION + 1) ):
+                        print count, "Break "
+                        break 
+                    count += 1 
+                outputstring = self.getReading()
+                print str(outputstring) + " W"
+            if hid_device:
+                hid_device.close()
+    
+        except Exception as e:
+            print e
+            traceback.print_exc(e)   
           
 if __name__ == '__main__': 
     logging.getLogger().setLevel(logging.DEBUG)

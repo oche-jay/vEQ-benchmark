@@ -35,7 +35,7 @@ class  VLCPlayback:
         self.db = db
         self.meter = meter
         self.duration = None
-        self.resize = False
+        self.resized = False
         self.vlcWidget = None
         self.playstart_time = 0
         self.polling_interval = 1
@@ -54,7 +54,10 @@ class  VLCPlayback:
 #         Hot fix was to make a symbolic link between 
 #          /Applications/VLC.app/Contents/MacOS/lib/vlc/plugins and /Applications/VLC.app/Contents/MacOS/plugins
 #          the latter being where the actual plugins are, the former being where VLC thinks they are
- 
+        
+        if sys.platform.startswith("darwin"):
+            logging.debug("Seting VLC_PLUGIN_PATH")
+            os.environ["VLC_PLUGIN_PATH"] = "/Applications/VLC.app/Contents/MacOS/plugins"
         instance = vlc.Instance(args)
         
         if instance  is None:
@@ -124,10 +127,15 @@ class  VLCPlayback:
         self.playstart_time = time.time()
         
         window_size = player.video_get_size(0)
-        if window_size[0] and window_size[1] > 10:
+        if window_size[0] and window_size[1] > 479: 
+#             (maximize video above 480p)
+            self.vlcWidget.showMaximized()
+            self.resized = True
+            logging.info("Maxmizing Window")
+        elif window_size[0] and window_size[1] > 10: 
             logging.info("Setting window size to: " + str(window_size))
             self.vlcWidget.resize(window_size[0],window_size[1])
-            self.resize = True
+            self.resized = True
         elif True: #TODO: try to get the size from elsewhere
             pass
 
@@ -154,8 +162,9 @@ class  VLCPlayback:
             
         except Exception:
             print('Error: %s' % sys.exc_info()[1])
+    
            
-    def start(self,duration=None):
+    def startPlayback(self,duration=None):
         '''
         Start the action for the duration (start the video) for the duration
         '''
@@ -194,31 +203,48 @@ class  VLCPlayback:
             player.video_set_marquee_int(vlc.VideoMarqueeOption.Position, vlc.Position.TopRight)
             
 
-            if self.vlc_playback_object.resize is False:
+            if self.vlc_playback_object.resized is False:
                 window_size = player.video_get_size(0)
-                if window_size[0] and window_size[1] > 10:
+
+                if window_size[0] and window_size[1] > 479: 
+#                 (maximize video above 480p)
+                    self.vlcWidget.showMaximized()
+                    self.resized = True
+                    logging.info("Maxmizing Window")
+                elif window_size[0] and window_size[1] > 10: 
                     logging.info("Setting window size to: " + str(window_size))
-                    self.vlc_playback_object.vlcWidget.resize(window_size[0],window_size[1])
+                    self.vlcWidget.resize(window_size[0],window_size[1])
+                    self.resized = True
+           
                     qr =  self.vlc_playback_object.vlcWidget.frameGeometry()
                     cp = QtGui.QDesktopWidget().availableGeometry().center()
                     qr.moveCenter(cp)
                     self.vlc_playback_object.vlcWidget.move(qr.topLeft())
                     print "should move"
-                    
-                    self.vlc_playback_object.resize = True
 
             while True:
-                count += 1
-                
+                count += 1 
+                print "goteem"
                 #                 try to resize the playback window
-                if self.vlc_playback_object.resize is False:
+                if self.vlc_playback_object.resized is False:
                     window_size = player.video_get_size(0)
-                    if window_size[0] and window_size[1] > 10:
+                    print str(window_size) +"XXXxxxxxxxxx"
+                    if window_size[0] and window_size[1] > 479:
+                        logging.info("Maximizing window " + str(window_size))
+                        self.vlc_playback_object.vlcWidget.showMaximized()
+#                         This is crashing on the Mac
+                        self.vlc_playback_object.resize = True  
+                    elif window_size[0] and window_size[1] > 10:
                         logging.info("Setting window size to: " + str(window_size))
                         self.vlc_playback_object.vlcWidget.resize(window_size[0],window_size[1])
                         self.vlc_playback_object.resize = True
+                    
+                    if sys.platform.startswith("win"): 
+#                         This appears to only work on windows    
                         qr =  self.vlc_playback_object.vlcWidget.frameGeometry()
+                        print "qr" + str(qr)
                         cp = QtGui.QDesktopWidget().availableGeometry().center()
+                        print "cp" + str(cp)
                         qr.moveCenter(cp)
                         self.vlc_playback_object.vlcWidget.move(qr.topLeft())
                         print "should move"
@@ -279,7 +305,7 @@ if __name__ == '__main__':
             print('Error: %s file not readable' % video)
             sys.exit(1)
         vlcPlayback = VLCPlayback(video)
-        vlcPlayback.start()
+        vlcPlayback.startPlayback()
     else:
         print('Usage: %s <movie_filename>' % sys.argv[0])
         
