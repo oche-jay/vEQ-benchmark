@@ -64,7 +64,7 @@ def getMean(numpy_array):
         """
         
         outliers = data[abs(data - numpy.mean(data)) > m * numpy.std(data)]
-        logging.warn("Outliers detected - rejecting the following values" + str(outliers))
+        logging.warn("Outliers detected  - rejecting the following values" + str(outliers))
 #         print "Outliers detected - rejecting the following values" + str(outliers)
         return data[abs(data - numpy.mean(data)) < m * numpy.std(data)]
         
