@@ -6,12 +6,16 @@ Created on 28 Mar 2015
 
 @author: ooe
 '''
-import hid
+
 import sys
 import traceback
 import time
 import logging
 from powermonitor.PowerMeter import PowerMeter
+try:
+    import hid 
+except:
+    logging.error("HIDAPI library for Python not installed") 
 
 PROFILE = False
 PROFILE_DURATION = 0 # (20 takes about 1 sec)
@@ -19,10 +23,11 @@ BAUD_SPEED = int(9600)
 
 # TODO: Make a parent class for all types of energymeter
 class VoltcraftMeter(PowerMeter):
+ 
+        
     logging.debug("Initializing Voltcraft VC 870 meter")
     hid_device = None
     
-
     def initDevice(self):
         ''' 
         Open and return the VC870 Hid device
@@ -66,7 +71,8 @@ class VoltcraftMeter(PowerMeter):
             else:
                 logging.error("Couldn't open Voltcraft device for reading")
                 return None
-            
+        except ImportError:
+               pass
         except:
                 logging.error("Couldn't open device")
                 traceback.print_exc(file=sys.stdout)
@@ -78,13 +84,13 @@ class VoltcraftMeter(PowerMeter):
         Reads the Device and returns a string representing the reading
         This can take up to form 0.012s - 1 sec if everything is working well
         If it takes longer than a second then there might be a problem with the devoce
-        See for Github VX970_USB_Catalog for details on the string format
+        See https://github.com/jsyk/VC870_USB_Datalog for details on the string format
         '''
         outputstring = ""
         count = 0
     # TODO move this loop to end_time
         if self.hid_device is not None:
-            while count < 120:     #if count gets to 120 then maybe the device isnt on, return nothing so that caller doesnt wait longer than necessaru
+            while count < 10000000:     #if count gets to 120 then maybe the device isnt on, return nothing so that caller doesnt wait longer than necessaru
                 res = 0;
                 while (res == 0):
                     res = self.hid_device.read(256);
@@ -104,15 +110,18 @@ class VoltcraftMeter(PowerMeter):
                         for i in xrange(0,length):
                             val = res[i+1] & 0x7f #bitwise and with 0111 1111, mask the upper bit which is always 1
                             currentchar = hex(val)[-1]                       
-                          
+                            print currentchar,
                             if currentchar == "d":
+                                print
                                 prevchar = currentchar
                                 continue
                             if  (prevchar == "d") and (currentchar == "a"):
             #                     0x0d 0x0a or newline encountered so this can retrurn a value
             #                     In the original C++ code, sysout appears to be able to deal with this newline automatically 
+#                                 On the MAC 0x0d 0x0a seems to be never sent so it never works
                                 return self.processPowerOutputString(outputstring)
                             outputstring +=str(currentchar) 
+                            print outputstring
             logging.warning("Count for VC meter exceeded: returning -1 for measurement")
             return -1
         
@@ -157,7 +166,7 @@ class VoltcraftMeter(PowerMeter):
             traceback.print_exc(e)   
           
 if __name__ == '__main__': 
-    logging.getLogger().setLevel(logging.DEBUG)
+    logging.getLogger().setLevel(logging.ERROR)
     logging.info("Started VC meter")
     vc = VoltcraftMeter() 
     if PROFILE:
