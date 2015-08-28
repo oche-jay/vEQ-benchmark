@@ -92,6 +92,7 @@ class vEQ_database(object):
     def __init__(self,db_loc=None): #consider overriding this to input a filepath  for the DB to be stored, if possible
         '''
         Constructor
+        db_loc : location to store db or just "memory" to store in memory
         '''
         home = expanduser("~")
         default_loc = os.path.join(home, 'vEQ_db.sqlite')
@@ -101,19 +102,21 @@ class vEQ_database(object):
             db_loc = default_loc
         elif db_loc.lower() == "memory":
             db_loc = ':memory:'
+        
         try:
             self.db = lite.connect(db_loc, check_same_thread = False) 
             cwd = os.getcwd()
-            pathname = os.path.dirname(cwd)
-            pwdb = os.path.normpath(os.path.join(pathname,db_loc) )
             
-            logging.debug("DB located at " + pwdb)
+#             pathname = os.path.dirname(cwd)
+#             pwdb = os.path.normpath(os.path.join(pathname,db_loc) )
+            logging.debug("DB located at " + db_loc)
             
-            print "DB located at " + pwdb
+            print "DB located at " + db_loc
             self.videoinfo_index = 0
             self.sysinfo_index = 0
             self.readings_index = 0
             self.summary_index = 0
+            self.initDB()
         except lite.Error, e:
             print(traceback.format_exc())
             logging.error( "Error %s:" % e.args[0])
