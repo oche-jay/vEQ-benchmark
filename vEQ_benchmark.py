@@ -48,7 +48,7 @@ def makeDefaultDBFolder():
 
 vlc_verbosity = -1
 default_youtube_quality= 'bestvideo'
-benchmark_duration = 120#or -1 for length of video
+benchmark_duration = 20#or -1 for length of video
 meter = None
 
 default_folder= makeDefaultDBFolder()
@@ -141,7 +141,6 @@ def main(argv=None):
         logging.warning("No power monitoring device found") 
     
     vEQdb = DB.vEQ_database(db_loc)
-    vEQdb.initDB()
     start_time = time.time()
     
     cpu = procmon.get_processor()
@@ -219,7 +218,8 @@ def main(argv=None):
     video_values = [start_time,video,video_data,video_codec,video_width,video_height] 
     video_index = vEQdb.insertIntoVideoInfoTable(video_values)
     
-#  ================  VLC VIDEO SPECIFIC =============== 
+#==========================================VLC VIDEO SPECIFIC =============== 
+#     if False:
     if system_player == "vlc":
         from videoInput.veqplayback import VLCPlayback
         vlc_args = "--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq " + "--verbose " + str(vlc_verbosity)
@@ -228,22 +228,23 @@ def main(argv=None):
         logging.debug("Starting Playback with VLC")
     
         vEQPlayback.startPlayback(benchmark_duration)
-    
-        end_time = time.time()
-        total_duration = end_time - start_time
    
     else:
 #         use subprocess to start video player and montioring!
-        GenericPlaybackObject.startPlayback(benchmarkduration)
-        pass
+#         GenericPlaybackObject.startPlayback(benchmarkduration)
+         from videoInput.genericPlayback import GenericPlayback
+         generic_command = "/Applications/VLC.app/Contents/MacOS/VLC -vvv"
+         workload =  "../gopro.mp4" #          pass this from cmd line or something       
+         genericPlayback =  GenericPlayback(workload=video,db=vEQdb,cmd=generic_command,meter=meter)
+         genericPlayback.startPlayback(benchmark_duration)
+  
+    end_time = time.time()
+    total_duration = end_time - start_time
     
     powers = vEQdb.getValuesFromPowerTable(start_time, end_time)
     cpus = vEQdb.getCPUValuesFromPSTable(start_time, end_time)
     memorys = vEQdb.getMemValuesFromPSTable(start_time, end_time)
     net_r = vEQdb.getValuesFromPSTable("net_recv", start_time, end_time) 
-    
-    print memorys
-    print net_r
     
     try:
         data_transferred = net_r[-1] - net_r[0]
@@ -310,7 +311,8 @@ def main(argv=None):
 #     TODO implemtent GPU monitoring    
     gpus=None
     plot_title = str(video_codec) + "- (" + str(video_title) + ")"
-    if to_plot:
+    if True:
+#     if to_plot:
         makeSubPlot(start_time=start_time, figure_title=plot_title, cpus=cpus, memorys=memorys, bitrate=bitrate, powers=powers, gpus=gpus, to_show=to_show)
 
 if __name__ == '__main__':

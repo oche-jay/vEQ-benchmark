@@ -220,18 +220,18 @@ def makeDownloadsFolder():
 
 def tiny_ssim(testvideo_width, testvideo_height, test_yuv_file, reference_video_yuv):
     commandx = ["tiny_ssim", reference_video_yuv, test_yuv_file, str(testvideo_width) + "x" + str(testvideo_height)]
-    for it in commandx:
-        print it
-    
-    print " " #     http://blog.endpoint.com/2015/01/getting-realtime-output-using-python.html
+    #     http://blog.endpoint.com/2015/01/getting-realtime-output-using-python.html
     '''
+    
     Calling Popen with universal_newlines=True because tiny_ssim 
     ouputs each line with ^M newline character - which maybe makes sense only
     on Windows or something, 
     In any case, this causes problems if not set
+    
     '''
     p = Popen(commandx, env=ENV_DICT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True)
-#     out, err = p.communicate(input) //communicate() is potentially memory intensive
+#   out, err = p.communicate(input) //communicate() is potentially memory intensive
+    
     output_arr = []
     while True:
         output = p.stdout.readline()
@@ -252,7 +252,6 @@ def tiny_ssim(testvideo_width, testvideo_height, test_yuv_file, reference_video_
    
     for it in output_arr:
         ssim_arr.append(re.split(r"[^\d.]+", it))
-    
     tiny_ssim_results = re.split(r"[^\d.]+", last_val)
    
     return tiny_ssim_results
@@ -269,19 +268,22 @@ def main(argv=None):
     video = args.video
     test_format = args.format
     reference_video = args.reference
-    
-# ================================================================================================ #  
-#     DATABASE SETUP  
-# ================================================================================================ #  
+        
+  
+#=====================================================================================================# 
+#                                DATABASE SETUP  
+#=====================================================================================================#  
 
     vEQdb = DB.vEQ_database()
     db =vEQdb.getDB()
     cursor = db.cursor()
     cursor.execute("CREATE TABLE if NOT exists video_quality_info (%s);" % vEQdb.VIDEO_QUALITY_COLS) 
-    
-# ================================================================================================ #  
-#     DATABASE SETUP ENDS 
-# ================================================================================================ #  
+
+#=====================================================================================================#  
+#                       DATABASE SETUP ENDS                                                           #  
+#=====================================================================================================# 
+
+ 
 
     if not validURLMatch(video) and not (os.access(video, os.R_OK)):
         print('Error: %s file not readable' % video)

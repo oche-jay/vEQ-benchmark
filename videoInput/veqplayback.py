@@ -3,20 +3,15 @@ Created on 13 Feb 2015
 
 @author: oche
 '''
-
 import time
-
-
 import vlc, sys, os, psutil
 from PyQt4 import QtCore
 from PyQt4 import QtGui
-
 import logging
 # from profilehooks import profile
 
 # TODO: Extract a parent class from this class
 class  VLCPlayback:
-    
     '''
     Class encapsulating the playback of a video using the VLC Media Player
     '''
@@ -31,7 +26,7 @@ class  VLCPlayback:
         args: args to startup vlc
         meter: a source for power readings - eg killawatt meter, voltcraft meter, acpi, smc, etc etc
         """
-        self.player = self.getPlayer(workload,args) 
+        self.player = self.createPlayer(workload,args) 
         self.db = db
         self.meter = meter
         self.duration = None
@@ -43,12 +38,11 @@ class  VLCPlayback:
     def end_callback(self, event):
         self.cleanExit(0)
          
-    def getPlayer(self,video,args):
+    def createPlayer(self,video,args):
         '''
          Setup and return a VLC Player 
          @param video: URL or File location for the video or video to be played 
-        '''
-#       
+        '''    
 #         For darwin, there is an issue with the vlc pluginpath since 2.2 I believe that should be dealt with
 #         ideally in code or fixed by Videolan Developers in a future release.
 #         Hot fix was to make a symbolic link between 
@@ -91,8 +85,7 @@ class  VLCPlayback:
         
         '''
         vlcApp = QtGui.QApplication(sys.argv)
-        self.vlcWidget = QtGui.QFrame()
-       
+        self.vlcWidget = QtGui.QFrame()       
         self.vlcWidget.setWindowTitle("vEQ_benchmark")  
 #         TODO: set window size here
         self.vlcWidget.show()
@@ -202,7 +195,6 @@ class  VLCPlayback:
             player.video_set_marquee_int(vlc.VideoMarqueeOption.Size, 50)  # pixels
             player.video_set_marquee_int(vlc.VideoMarqueeOption.Position, vlc.Position.TopRight)
             
-
             if self.vlc_playback_object.resized is False:
                 window_size = player.video_get_size(0)
 
@@ -215,7 +207,6 @@ class  VLCPlayback:
                     logging.info("Setting window size to: " + str(window_size))
                     self.vlcWidget.resize(window_size[0],window_size[1])
                     self.resized = True
-           
                     qr =  self.vlc_playback_object.vlcWidget.frameGeometry()
                     cp = QtGui.QDesktopWidget().availableGeometry().center()
                     qr.moveCenter(cp)
@@ -255,6 +246,7 @@ class  VLCPlayback:
                 mempercent_val = vlcProcess.memory_percent()
                 mem_val = vlcProcess.memory_info()
                 rss =  mem_val.rss
+                
                 if sys.platform.startswith("darwin"):
 #               Theres no way to capture this  on bsd unix apparently #
                     io_read = -1
@@ -291,13 +283,10 @@ class  VLCPlayback:
                     break
                 
                 time.sleep(self.vlc_playback_object.polling_interval) #TODO: set this to a polling interval that can be set in args
-            
 #                     print_info(self.player)   
             def emitFinished():
                 logging.debug("Video playback completed...Exiting")
                 self.finished.emit()
-
-
 
 if __name__ == '__main__':
     if sys.argv[1:] and sys.argv[1] not in ('-h', '--help'):
