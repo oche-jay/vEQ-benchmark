@@ -58,7 +58,7 @@ class VoltcraftMeter(PowerMeter):
                 self.hid_device.open(0x1a86, 0xe008)
            
                 bps = BAUD_SPEED         
-                buf = [0x05, 0x80, BAUD_SPEED>>8, BAUD_SPEED>>16, BAUD_SPEED>>24, 0x03]
+                buf = [0x00, 0x80, BAUD_SPEED>>8, BAUD_SPEED>>16, BAUD_SPEED>>24, 0x03]
                 res = self.hid_device.send_feature_report(buf);
         
                 logging.debug("HID device feature report sent -Value returned: " + str(res))
