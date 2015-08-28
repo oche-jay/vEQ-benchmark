@@ -220,8 +220,8 @@ def main(argv=None):
     video_index = vEQdb.insertIntoVideoInfoTable(video_values)
     
 #==========================================VLC VIDEO SPECIFIC =============== 
-    if False:
-#     if system_player == "vlc":
+#     if False:
+    if system_player == "vlc":
         from videoInput.veqplayback import VLCPlayback
         vlc_args = "--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq " + "--verbose " + str(vlc_verbosity)
         vEQPlayback = VLCPlayback(video,vEQdb,vlc_args,meter)
