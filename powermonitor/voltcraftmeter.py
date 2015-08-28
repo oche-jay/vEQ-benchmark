@@ -16,13 +16,13 @@ import platform
 try:
 	if (platform.system().startswith("Linux") or platform.system().startswith("darwin")):
    		import hidraw as hid
-		#Not sure why and how but this gives errors
+		#Not sure why and how but this gives errors if not used on linux
 	else:
     		import hid
 except ImportError:
-	print "HIDAPI not installed"
+	logging.error("HIDAPI not installed")
 
-import powermonitor.PowerMeter
+#import powermonitor.PowerMeter
 
 PROFILE = False
 PROFILE_DURATION = 0 # (20 takes about 1 sec)
@@ -72,9 +72,9 @@ class VoltcraftMeter():
                 res = self.hid_device.send_feature_report(buf);    
                 
                 
-                print "Succefully opened VC"
+                logging.info("Succefully opened VC")
 
-                print("HID device feature report sent -Value returned: " + str(res))
+                logging.info("HID device feature report sent -Value returned: " + str(res))
                 
                 logging.debug("HID device feature report sent -Value returned: " + str(res))
                 if res > 0:
@@ -103,7 +103,7 @@ class VoltcraftMeter():
         outputstring = ""
         count = 0
         logging.debug("Trying to get reading for vc")
- # TODO move this loop to end_time
+ 	# TODO move this loop to end_time
         if self.hid_device is not None:
             while count < 120:    #if count gets to 120 then maybe the device isnt on, return nothing so that caller doesnt wait longer than necessaru
                 res = 0;
@@ -137,7 +137,7 @@ class VoltcraftMeter():
 #                                 On the MAC 0x0d 0x0a seems to be never sent so it never works
                                 return self.processPowerOutputString(outputstring)
                             outputstring +=str(currentchar) 
-                            logging.debug("VC outputstring: " + outputstring)
+                         #   logging.debug("VC outputstring: " + outputstring)
             logging.warning("Count for VC meter exceeded: returning -1 for measurement")
             return -1
         
