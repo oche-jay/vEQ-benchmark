@@ -11,19 +11,26 @@ import sys
 import traceback
 import time
 import logging
-from powermonitor.PowerMeter import PowerMeter
+import platform
+
 try:
-    import hid 
-except:
-    logging.error("HIDAPI library for Python not installed") 
+	if (platform.system().startswith("Linux") or platform.system().startswith("darwin")):
+   		import hidraw as hid
+		#Not sure why and how but this gives errors
+	else:
+    		import hid
+except ImportError:
+	print "HIDAPI not installed"
+
+import powermonitor.PowerMeter
 
 PROFILE = False
 PROFILE_DURATION = 0 # (20 takes about 1 sec)
 BAUD_SPEED = int(9600)
 
 # TODO: Make a parent class for all types of energymeter
-class VoltcraftMeter(PowerMeter):
- 
+#class VoltcraftMeter(PowerMeter):
+class VoltcraftMeter():
         
     logging.debug("Initializing Voltcraft VC 870 meter")
     hid_device = None
@@ -52,15 +59,23 @@ class VoltcraftMeter(PowerMeter):
         try:
             self.hid_device = hid.device()
             dev = hid.enumerate(0x1a86, 0xe008)
-            logging.debug("Hid device at :" + str(dev))
+            print dev
            
-            if len(dev) > 0:
-                self.hid_device.open(0x1a86, 0xe008)
-           
-                bps = BAUD_SPEED         
-                buf = [0x00, 0x80, BAUD_SPEED>>8, BAUD_SPEED>>16, BAUD_SPEED>>24, 0x03]
-                res = self.hid_device.send_feature_report(buf);
-        
+            if dev:
+#                 if sys.platform.startswith("linux"):
+#                     import subprocess
+#                     res = subprocess.check_output(["vc_send_feature_report"]) #hack to use known working C++ code, can't figure out why this wont work in Linux. Need to ensure this code is installed and on the path somewhere
+#                 else:
+             	self.hid_device.open(0x1a86, 0xe008)
+               	bps = BAUD_SPEED         
+                buf = [0x00,0x80, 0x25, 0x00, 0x00, 0x03] 
+                res = self.hid_device.send_feature_report(buf);    
+                
+                
+                print "Succefully opened VC"
+
+                print("HID device feature report sent -Value returned: " + str(res))
+                
                 logging.debug("HID device feature report sent -Value returned: " + str(res))
                 if res > 0:
                     logging.debug("HID device sucessfully initiated at " + str(self.hid_device)) 
@@ -71,8 +86,7 @@ class VoltcraftMeter(PowerMeter):
             else:
                 logging.error("Couldn't open Voltcraft device for reading")
                 return None
-        except ImportError:
-               pass
+            
         except:
                 logging.error("Couldn't open device")
                 traceback.print_exc(file=sys.stdout)
@@ -88,12 +102,14 @@ class VoltcraftMeter(PowerMeter):
         '''
         outputstring = ""
         count = 0
-    # TODO move this loop to end_time
+        logging.debug("Trying to get reading for vc")
+ # TODO move this loop to end_time
         if self.hid_device is not None:
-            while count < 10000000:     #if count gets to 120 then maybe the device isnt on, return nothing so that caller doesnt wait longer than necessaru
+            while count < 120:    #if count gets to 120 then maybe the device isnt on, return nothing so that caller doesnt wait longer than necessaru
                 res = 0;
                 while (res == 0):
                     res = self.hid_device.read(256);
+                    
                     count+=1
                 
                 if (res < 0):
@@ -102,7 +118,8 @@ class VoltcraftMeter(PowerMeter):
                 else:
                     length = res[0] & 7; # the first byte contains the length in the lower 3 bits ( 111 = 7 )   
                     if length > 0:    
-                        logging.debug("Recieved a packet of size: " + str(length) + " from device" )
+                        logging.debug("Received a packet of size: " + str(length) + " from device" )
+                        logging.debug("VC Meter Reading: " + str(res))
                     prevchar = None 
                     currentchar = None 
                         
@@ -110,9 +127,8 @@ class VoltcraftMeter(PowerMeter):
                         for i in xrange(0,length):
                             val = res[i+1] & 0x7f #bitwise and with 0111 1111, mask the upper bit which is always 1
                             currentchar = hex(val)[-1]                       
-                            print currentchar,
+        #                     
                             if currentchar == "d":
-                                print
                                 prevchar = currentchar
                                 continue
                             if  (prevchar == "d") and (currentchar == "a"):
@@ -121,13 +137,13 @@ class VoltcraftMeter(PowerMeter):
 #                                 On the MAC 0x0d 0x0a seems to be never sent so it never works
                                 return self.processPowerOutputString(outputstring)
                             outputstring +=str(currentchar) 
-                            print outputstring
+                            logging.debug("VC outputstring: " + outputstring)
             logging.warning("Count for VC meter exceeded: returning -1 for measurement")
             return -1
         
         else:
             logging.warning("No device detected")
-            return -1
+            return -1 #should never get here
     
     def processPowerOutputString(self,outputstring):
         vc_function = outputstring[0:2]
@@ -166,7 +182,7 @@ class VoltcraftMeter(PowerMeter):
             traceback.print_exc(e)   
           
 if __name__ == '__main__': 
-    logging.getLogger().setLevel(logging.ERROR)
+    logging.getLogger().setLevel(logging.DEBUG)
     logging.info("Started VC meter")
     vc = VoltcraftMeter() 
     if PROFILE:
