@@ -34,9 +34,8 @@ from util import getMean
 from youtube_dl import YoutubeDL
 import database.vEQ_database as DB
 import processmonitor.processMonitor as procmon
-
-
 from powermonitor.voltcraftmeter import VoltcraftMeter
+
 # TODO: Set logging level from argument
 
 def makeDefaultDBFolder():
@@ -47,7 +46,7 @@ def makeDefaultDBFolder():
         os.makedirs(video_download_folder)
     return video_download_folder
 
-vlc_verbosity = 3
+vlc_verbosity = -1
 default_youtube_quality= 'bestvideo'
 benchmark_duration = 120#or -1 for length of video
 meter = None
