@@ -12,6 +12,7 @@ import time
 import traceback
 from subprocess import PIPE
 import psutil
+import logging
 import database.vEQ_database as DB
 
 class GenericPlayback(object):
@@ -37,20 +38,25 @@ class GenericPlayback(object):
         
         
         ENV_DICT = os.environ
-        print ENV_DICT["PATH"]  
+        logging.debug("Path: " + ENV_DICT["PATH"])  
 #         "add expected location for known locations of"
         
     def startPlayback(self,duration=None):
          ENV_DICT = os.environ
-         print ENV_DICT["PATH"] 
-         self.proc = px = psutil.Popen(self.args, stdout=PIPE)
-         print px.cpu_percent(interval=0.1)
+#  	 print ENV_DICT["PATH"]
+#	 print self.args
+	 self.playstart_time = time.time() 
+         logging.debug(self.args)
+	 self.proc = px = psutil.Popen(self.args, stdout=PIPE)
+         logging.debug(px.cpu_percent(interval=0.1))
          count = 0
+	
          while True:
-             if duration and count >= duration:
-                break
+	    # print "count is: " + str(count)
+            # if duration and count >= duration:
+            #   break
              
-             timestamp = time.time()
+             timestamp = loop_starttime = time.time()
              sys_index_FK = self.db.sysinfo_index
              video_index_FK = self.db.videoinfo_index   
              
@@ -59,6 +65,12 @@ class GenericPlayback(object):
              mem_val = px.memory_info()
              rss =  mem_val.rss
              
+	     for proc in px.children(recursive=True):
+             	cpu_val += proc.cpu_percent()
+                mempercent_val += proc.memory_percent()
+                rss +=  mem_val.rss
+		
+
              print "cpu " + str(cpu_val)
              print "mem " + str(mempercent_val)
              marq_str = str.format("CPU: %3.1f%%%%\nMEM: %3.1f%%%%\n" % (cpu_val,mempercent_val)) #need to escape %% twice
@@ -82,7 +94,7 @@ class GenericPlayback(object):
                 
              marq_str = str.format("CPU: %3.1f%%%%\nMEM: %3.1f%%%%\nPOWR: %3.1fW\n" % (cpu_val,mempercent_val,power_val)) #need to escape %% twice
 
-# 
+
              sent_now = psutil.net_io_counters().bytes_sent
              recv_now = psutil.net_io_counters().bytes_recv
        
@@ -91,15 +103,25 @@ class GenericPlayback(object):
              self.db.insertIntoReadingsTable(values)
              self.db.insertIntoPowerTable(powers)
              
-             count+=1  
-             time.sleep(1)
+             count+=1
+	     now = time.time()
+	     elapsed = now - self.playstart_time 
+	     if duration and  elapsed  >= duration:
+		break 
+             
+	     # wait for the time left to complete one second, 
+             # if it's a negative number, it means the loop took 
+	     # longer than 1 second to complete. 
+	     # In this case no need to wait at all
+	     time.sleep(max(0,1-(now-loop_starttime)))
+
          self.stopPlayback()
          return 1
     
     
     def stopPlayback(self):
         px = self.proc
-        for proc in px.get_children(recursive=True):
+        for proc in px.children(recursive=True):
             proc.kill()
         px.kill()
         
@@ -112,9 +134,9 @@ if __name__ == '__main__':
         on Windows or something, 
         In any case, this causes problems if not set
         '''
-        workload = "../gopro.mp4"
+        workload = "/home/system/480p_transformerts.mp4"
         youtube_quality = ""
-        args = ["/Applications/VLC.app/Contents/MacOS/VLC", workload]
+        args = ["/usr/bin/omxplayer", workload]
         db = DB.vEQ_database("memory")
         cmd= "/Applications/VLC.app/Contents/MacOS/VLC -vv "  + workload
         args = shlex.split(cmd)
