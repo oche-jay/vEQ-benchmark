@@ -69,8 +69,8 @@ class GenericPlayback(object):
                 io_read = -1
                 io_write = -1
              else:
-                io_read = vlcProcess.io_counters().read_bytes
-                io_write = vlcProcess.io_counters().write_bytes
+                io_read = px.io_counters().read_bytes
+                io_write = px.io_counters().write_bytes
   
              if self.meter is not None:
                 power_val = self.meter.getReading()
