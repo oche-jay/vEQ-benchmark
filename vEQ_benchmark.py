@@ -54,7 +54,7 @@ meter = None
 default_folder= makeDefaultDBFolder()
 default_database = os.path.join( default_folder, "vEQ_db.sqlite")
 
-logging.getLogger().setLevel(logging.DEBUG)
+logging.getLogger().setLevel(logging.ERROR)
 
 # Some available Formats for Youtube
 # format code  extension  resolution note
@@ -156,7 +156,7 @@ def main(argv=None):
         logging.error('Error: %s file not readable' % video)
         sys.exit(1)
      
-    try: 
+    try:
         if not validURLMatch(video): 
             logging.debug("Found regular video - using MediaInfo to extract details")  
             video_url = video
@@ -233,7 +233,7 @@ def main(argv=None):
 #         use subprocess to start video player and montioring!
 #         GenericPlaybackObject.startPlayback(benchmarkduration)
          from videoInput.genericPlayback import GenericPlayback
-         generic_command = "/Applications/VLC.app/Contents/MacOS/VLC -vvv"
+         generic_command = "/usr/bin/omxplayer"
          workload =  "../gopro.mp4" #          pass this from cmd line or something       
          genericPlayback =  GenericPlayback(workload=video,db=vEQdb,cmd=generic_command,meter=meter)
          genericPlayback.startPlayback(benchmark_duration)
