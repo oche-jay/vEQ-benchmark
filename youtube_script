@@ -1,0 +1,8 @@
+#!/bin/bash
+time for i in {1..5};  
+	do for format in $(cat formats); 
+		do for vid in $(cat youtubes); 
+			do sudo python vEQ_benchmark.py -y $format https://www.youtube.com/watch?v=$vid ; 
+			done;  
+		done; 
+	done; 
