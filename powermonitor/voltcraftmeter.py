@@ -102,10 +102,10 @@ class VoltcraftMeter():
         '''
         outputstring = ""
         count = 0
-        logging.debug("Trying to get reading for vc")
+        logging.debug("Trying to get reading for VC")
  	# TODO move this loop to end_time
         if self.hid_device is not None:
-            while count < 120:    #if count gets to 120 then maybe the device isnt on, return nothing so that caller doesnt wait longer than necessaru
+            while count < 200:    #if count gets to 120 then maybe the device isnt on, return nothing so that caller doesnt wait longer than necessaru
                 res = 0;
                 while (res == 0):
                     res = self.hid_device.read(256);
@@ -134,8 +134,10 @@ class VoltcraftMeter():
                             if  (prevchar == "d") and (currentchar == "a"):
             #                     0x0d 0x0a or newline encountered so this can retrurn a value
             #                     In the original C++ code, sysout appears to be able to deal with this newline automatically 
-#                                 On the MAC 0x0d 0x0a seems to be never sent so it never works
-                                return self.processPowerOutputString(outputstring)
+#                                 On the MAC 0x0d 0x0a seems to be never sent so it never work		`s
+		
+		              logging.debug("VC Count got to :" + str(count))  
+                              return self.processPowerOutputString(outputstring)
                             outputstring +=str(currentchar) 
                          #   logging.debug("VC outputstring: " + outputstring)
             logging.warning("Count for VC meter exceeded: returning -1 for measurement")
