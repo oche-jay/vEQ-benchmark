@@ -90,14 +90,15 @@ logging.getLogger().setLevel(logging.ERROR)
 def main(argv=None):
     parser = argparse.ArgumentParser(description="vEQ-benchmark: A Benchmarking and Measurement Tool for Video")
     parser.add_argument("video" , metavar="VIDEO", help="A local file or URL(Youtube, Vimeo etc.) for the video to be benchmarked")
-    parser.add_argument("-y" , "--youtube-format", metavar="format", dest="youtube_quality", default=default_youtube_quality, help="For Youtube videos, a value that corressponds to the quality level see youtube-dl for details")
-    parser.add_argument("-m" , "--power-meter", metavar="meter", dest="meter", default='voltcraft',   help="The meter to use for power measurement TODO: Expand this")
+    parser.add_argument("-y", "--youtube-format", metavar="format", dest="youtube_quality", default=default_youtube_quality, help="For Youtube videos, a value that corressponds to the quality level see youtube-dl for details")
+    parser.add_argument("-m", "--power-meter", metavar="meter", dest="meter", default='voltcraft',   help="The meter to use for power measurement TODO: Expand this")
     parser.add_argument("-d", "--duration", metavar="Duration", dest="benchmark_duration", default=120, type=int, help="The length of time in seconds for the benchmark to run.")
     parser.add_argument("-D", "--Database-location", dest="db_loc", metavar ="location for database file or \'memory\'", help = "A absolute location for storing the database file ")
     parser.add_argument("-P", "--plot", dest="to_plot", action='store_true', help="Flag to set if this session should be plotted")
     parser.add_argument("-S", "--show", dest="to_show", action='store_true', help="Flag to set if the plot of this should be displayed on the screen after a session is completed")
-    parser.add_argument("-p","--player", metavar="player", dest="system_player", default="vlc", help="The Player to use to playback video - default is VLC MediaPlayer")
-    
+    parser.add_argument("-p", "--player", metavar="player", dest="system_player", default="vlc", help="The Player to use to playback video - default is VLC MediaPlayer")
+    parser.add_argument("--hwdecode", dest="hw_decode", action='store_true', help="VLC Specific, turn hardware decoding on")
+
 #     TODO: implement dynamic power metering VoltcraftMeter
     args = parser.parse_args()    
     video = args.video
@@ -108,6 +109,7 @@ def main(argv=None):
     to_plot = args.to_plot
     m = args.meter
     system_player = args.system_player
+    hw_decode = args.hw_decode
     
     
     video_title = None
@@ -124,9 +126,11 @@ def main(argv=None):
     
     logging.info("Started VEQ_Benchmark")
     
+    #TODO: Extract this from here
     implementedPowerMeters = {
                               "voltcraft": VoltcraftMeter()
                             }
+    
     meter = implementedPowerMeters.get(m,None) 
     
 #    can inject dependency here i.e power meter or smc or bios or batterty
@@ -223,7 +227,11 @@ def main(argv=None):
     if system_player == "vlc":
         from videoInput.veqplayback import VLCPlayback
         vlc_args = "--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq " + "--verbose " + str(vlc_verbosity)
-        vEQPlayback = VLCPlayback(video,vEQdb,vlc_args,meter)
+        	
+	if hw_decode:
+		vlc_args = vlc_args + "--avcodec-hw=any"
+
+	vEQPlayback = VLCPlayback(video,vEQdb,vlc_args,meter)
     
         logging.debug("Starting Playback with VLC")
     
