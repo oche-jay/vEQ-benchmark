@@ -8,20 +8,14 @@ import os, time, datetime
 from database import vEQ_database as vqdb
 import numpy
 from util import getConfidence
+import logging
 import matplotlib.pyplot as plt
 
-# TODO: Make this portable or more sensibel
 
-# PATH_TO_DB = 'C:/Users/ooe/Documents/linux_vEQ_db.sqlite'
-
-# PATH_TO_DB = 'C:/Users/ooe/Documents/git/vEQ_db.sqlite'
-# PATH_TO_DB = 'C:/Users/ooe/Documents/linux_vEQ_db.sqlite'
-PATH_TO_DB = '/Users/oche/Dropbox/vEQ_db.sqlite'
-# PATH_TO_DB = '/Users/oche/linux_vEQ_db.sqlite'
-# PATH_TO_DB = 'C:/Users/ooe/Documents/git/vEQ_db.sqlite'
-# PATH_TO_DB = 'C:/Users/ooe/Documents/linux_vEQ_db.sqlite'
-
-
+logging.getLogger().setLevel(logging.DEBUG)
+PATH_TO_DB = '/Users/oche/vEQ-benhmark_i5/vEQ-benchmark/vEQ_db.sqlite'
+PATH_TO_DB = '/Users/oche/vEQ-benhmark_PI/vEQ-benchmark/vEQ_db.sqlite'
+# PATH_TO_DB = 'C:/Users/ooe/Documents/linux_vEQ_db.sqlite'
 dbpath = os.path.abspath(PATH_TO_DB)
 vEQdb = vqdb.vEQ_database(dbpath)
 s =time.time()
@@ -33,12 +27,15 @@ def getMatchListFromTuple(movieList, tupleList, indexToRetrieve=1):
     '''
     matchingValues=[]
     for title in movieList:
+            
+        value = 0
         for x in tupleList:
-            value = 0
+        
             if title in x[0]:
-                pow_value = x[indexToRetrieve]
-                break   
-        matchingValues.append(pow_value)
+                value = x[indexToRetrieve]
+#                 matchingValues.append(value)
+                break #go to next title
+        matchingValues.append(value)  
     return  matchingValues
 
 def plotMultiplePowerBarsForTitle(x0=None, x0_errs=None, x1=None, x1_errs=None, x2=None, x2_errs=None, **kwargs):
@@ -76,6 +73,7 @@ def plotMultiplePowerBarsForTitle(x0=None, x0_errs=None, x1=None, x1_errs=None, 
     plt.title(title)
 
 
+
     def autolabel(rects):
         # attach some text labels
         for rect in rects:
@@ -87,9 +85,90 @@ def plotMultiplePowerBarsForTitle(x0=None, x0_errs=None, x1=None, x1_errs=None, 
 #     autolabel(rects2)
     plt.gcf().tight_layout()
     plt.savefig("/Users/oche/Dropbox/Documents/Papers/ism2015/figures/benchmark-results-by-title-HD.eps")
-#     plt.show()
+    plt.show()
 
-def plotPowerandCPU(x_values, allsummary, targets=[], **kwargs):
+def plotPowerandCPU(x_values, summary_by, targets=[], **kwargs):
+    """
+    x_values is a list or tuple of distinct values in the zeroth column for the x axis
+    targets is a list of matches for VALUES that you want to see in the plot, if not specified everything will be shown
+    """
+    ts = time.time()
+    st = datetime.datetime.fromtimestamp(ts).strftime('%H%M%S')
+    xlabel = kwargs.get('xlabel', "Default X Lable")
+    title = kwargs.get('title', "Default Title")
+    filename = kwargs.get('filename', "")
+
+    plt.rcParams['pdf.fonttype']=42 #to fix issue with wierd percentage symbols on Mac OSX
+    vcs = []
+    powers= []
+    power_confs = []
+    cpus = []
+    cpus_confs = []    
+    for vcodec in x_values:
+        vc = str(vcodec[0])
+        print vc
+#         print targets
+        if not targets or ((targets) and (vc in targets)):
+            print vc
+            power_tup = []
+            cpu_tup = []
+            for each_tuple in summary_by:
+                if vc in each_tuple:
+                    pow = each_tuple[1]
+                    cpu = each_tuple[2]
+                    
+                    if pow and cpu is not None:
+                        power_tup.append(pow)
+                        cpu_tup.append(cpu)
+        #         print vc, power_tup
+            
+            power_np = numpy.array(power_tup)
+            cpu_np = numpy.array(cpu_tup)
+            vc = vc[0:4]
+            vcs.append(vc)
+            powers.append(power_np[power_np>0].mean())
+            power_confs.append(getConfidence(power_np[power_np>0]))
+            cpus.append(cpu_np.mean())
+            cpus_confs.append(getConfidence(cpu_np))
+        
+    ind = numpy.arange(len(vcs))
+    ind = ind+0.5  # the x locations for the groups
+    width = 0.35       # the width of the bars
+    
+    fig, ax1 = plt.subplots()
+#     plt.xticks(rotation=90)
+    rects1 = ax1.bar(ind, powers, color='g', yerr=power_confs)
+    
+#     ax1.set_ylim([40,120])
+    ax1.set_xlabel(xlabel)
+    ax1.set_ylabel(r'System Power $- P_a$ (W)' )
+    ax1.grid(True)
+    ax1.axhline("2.6", color='blue', linewidth=2)
+    
+    ax2 = ax1.twinx()
+#     ax2.set_ylim([0,10])
+    ax2.plot(ind+0.4, cpus, color='r')
+    ax2.errorbar(ind+0.4, cpus, yerr=cpus_confs, color='r', ecolor='r', fmt='o')
+    ax2.set_ylabel('CPU(%)',color='r')
+     
+    # You can specify a rotation for the tick labels in degrees or with keywords.
+    
+    plt.xticks(ind+0.4, vcs)
+    # plt.setp(ax1[1].xaxis.get_majorticklabels(), )
+
+    #Tweak spacing to prevent clipping of tick-labels
+    plt.subplots_adjust(bottom=0.25)
+    plt.title(title)
+    
+    if not os.path.exists("plots"): 
+        os.makedirs("plots")
+        
+    plt.savefig(filename)
+    
+    plt.show()       
+    print time.time()-s
+    
+def plotBW(x_values, summary_by_codec, targets=[], **kwargs):
     """
     values is a list or tuple of distinct values in the zeroth column for the x asis 
     targets is a list of matches for VALUES that you want to see in the plot, if not specified everything will be show
@@ -105,14 +184,15 @@ def plotPowerandCPU(x_values, allsummary, targets=[], **kwargs):
     powers= []
     power_confs = []
     cpus = []
-    cpus_confs = []    
+    cpus_confs = []
+    
     for vcodec in x_values:
         vc = vcodec[0]
         print vc
         if not targets or ((targets) and (vc in targets)):
             power_tup = []
             cpu_tup = []
-            for each_tuple in allsummary:
+            for each_tuple in summary_by_codec:
                 if vc in each_tuple:
                     val = each_tuple[1]
                     if val is not None:
@@ -215,6 +295,7 @@ def plotBW(x_values, allsummary, targets=[], **kwargs):
     ax1.set_ylabel('Bitrate (Mbps)')
     ax1.grid(True)
       
+      
     # You can specify a rotation for the tick labels in degrees or with keywords.
     
     plt.xticks(ind+0.4, vcs)
@@ -235,12 +316,14 @@ def plotBW(x_values, allsummary, targets=[], **kwargs):
 def getConfbyTitleandHeightAbeg(movies_720,h):
     confs = []
     for title in movies_720:
-        h = 1080
+#         h = 1080
         vals = vEQdb.getQuerybyNameandHeight(title, h)
-        print title, vals
+#         logging.debug("Title: %s, Value %s "  % (title, vals))
         if vals:
             p = zip(*vals)[2]
+#             print p
             np_ar = numpy.array(p)
+            np_ar = np_ar[np_ar>0]
             confs.append(getConfidence(np_ar) )
         else: 
            confs.append(0)
@@ -255,6 +338,8 @@ itags=["243 - 640x360 (DASH video)", "43 - 640x360", "243 - 640x360 (DASH video)
        "138 - 3840x2160 (DASH video)", "313 - 3840x2160 (DASH video)" ]
 
 heights = ['320','480','720','1080','1440','2160']
+heights = ['240','360','480','720','1080', '1440', '2160']
+heights = ['240','360','480','720','1080']
 
 title1 = 'vEQ-benchmark - Summary results\n (Linux workstation, YouTube videos )\n'
 title1 = 'vEQ-benchmark - Summary results\n (Windows workstation, YouTube videos )\n'
@@ -264,14 +349,54 @@ filename1 = "benchmark-results-by-height" + plat
 filename2 = "benchmark-results-by-itags" + plat 
 
 vcodecs = vEQdb.getDistinctVideoCodecsfromDB()
-allsummary = vEQdb.getSummaryfromVeqDB()
+summary_by_codec = vEQdb.getSummaryfromVeqDB()
+# for v in summary_by_codec:
+#     print v
+# print
 
 vheights = vEQdb.getDistinctVideoHeightfromDB()
-heightssummary = vEQdb.getSummaryfromVeqDBbyHeight()
+summary_by_heights = vEQdb.getSummaryfromVeqDBbyHeight()
 
 vtitles = vEQdb.getDistinctColumnfromDB("video_name")
 ts = time.time()
 st = datetime.datetime.fromtimestamp(ts).strftime('%Y%m%d%H%M%S')
+
+
+# xvalues = vEQdb.getDistinctColumnfromDBwithHeightFilter("video_name", height_filter=720)
+# for v in xvalues:
+#     print v
+# print
+# 
+# x2values =  vEQdb.getDistinctColumnfromDBwithHeightFilter("video_name", height_filter=1080)
+# for v in x2values:
+#     print v
+# print
+# 
+# x3values =  vEQdb.getDistinctColumnfromDBwithHeightFilter("video_name", height_filter=2160)
+# 
+# for v in x3values:
+#     print v
+# print
+# 
+# movies_720 = zip(*xvalues)[0]
+# powers_720 = list(zip(*xvalues)[1])
+# cpus_720 =  list(zip(*xvalues)[2])
+# 
+# cpus_1080=[]
+# powers_2160=[]
+# cpus_2160=[]
+# 
+# powers_1080 = getMatchListFromTuple(movies_720, x2values, 1)
+# powers_2160 = getMatchListFromTuple(movies_720, x3values, 1)
+# 
+# cpus_1080 = getMatchListFromTuple(movies_720, x2values, 2)
+# cpus_2160 = getMatchListFromTuple(movies_720, x3values, 2)
+#     
+# movie_labels = [item[0:16] for item in movies_720]
+# 
+# power720errs = getConfbyTitleandHeightAbeg(movies_720, 720)
+# power1080errs = getConfbyTitleandHeightAbeg(movies_720, 1080)
+# power2160errs = getConfbyTitleandHeightAbeg(movies_720, 2160)
 
 xvalues = vEQdb.getDistinctColumnfromDBwithHeightFilter("video_name", height_filter=720)
 x2values =  vEQdb.getDistinctColumnfromDBwithHeightFilter("video_name", height_filter=1080)
@@ -291,14 +416,26 @@ powers_2160 = getMatchListFromTuple(movies_720, x3values, 1)
 cpus_1080 = getMatchListFromTuple(movies_720, x2values, 2)
 cpus_2160 = getMatchListFromTuple(movies_720, x3values, 2)
 
+# print movie_labels
+# print powers_720
+# print powers_1080
+# print powers_2160
 
+
+
+# print power720errs, power1080errs, power1080errs
+# plotPowerandCPU(vcodecs, summary_by_codec, targets=itags, xlabel='itags (YouTube)', title=title1, filename=filename2) 
+# plotPowerandCPU(vcodecs, summary_by_codec, targets=heights, xlabel='heights (YouTube)', title=title1, filename=filename2)
+
+print "vheight"
+for v in vheights: 
+    print "vheight: " + str(v)
     
-movie_labels = [item[0:16] for item in movies_720]
+plotPowerandCPU(vheights, summary_by_heights, targets=heights, xlabel='Video height (Youtube)', title='System Power usage by Raspberry PI' , filename="raspberrypi_power.png")
+# plotPowerandCPU(vheights, summary_by_heights, targets=heights, xlabel='Video height (Youtube)', title="Mean Bitrate for Youtube Videos", filename="kk.png")
 
-power720errs = getConfbyTitleandHeightAbeg(movies_720, 720)
-power1080errs = getConfbyTitleandHeightAbeg(movies_720, 1080)
-power2160errs = getConfbyTitleandHeightAbeg(movies_720, 2160)
-print power720errs
+# plotPowerandCPU(vtitles, summary_by_codec)
+
 
 # plotPowerandCPU(vcodecs, allsummary, targets=itags, xlabel='itags (YouTube)', title=title1, filename=filename2)
 # plotPowerandCPU(vcodecs, allsummary, targets=heights, xlabel='itags (YouTube)', title=title1, filename=filename2)

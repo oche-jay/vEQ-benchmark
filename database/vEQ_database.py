@@ -368,7 +368,7 @@ class vEQ_database(object):
         '''
         with self.db as db:
             cursor = db.cursor()
-            cursor.execute("SELECT video_height, avg(mean_power) as pow FROM veq_summary GROUP BY video_height ORDER BY pow;")
+            cursor.execute("SELECT cast(video_height as number) as video_height, avg(mean_power) as pow FROM veq_summary GROUP BY video_height ORDER BY video_height;")
             values = cursor.fetchall()  
         return values 
     
@@ -427,7 +427,19 @@ class vEQ_database(object):
 #             cursor = db.cursor()
 #             db.row_factory = lambda cursor, row: row[0]
             cursor = db.cursor()
-            cursor.execute("SELECT video_height, mean_bandwidth , mean_cpu FROM veq_summary order by video_height;")
+            cursor.execute("SELECT video_height, mean_power, mean_cpu FROM veq_summary order by video_height;")
+            values = cursor.fetchall()
+        return values
+    
+    def getSummaryofValuefromVeqDBbyHeight(self, colname):
+        '''
+        Get individual readings for video_height, \'colname\', mean_cpu from the veq_summary table
+        '''    
+        with self.db as db:
+#             cursor = db.cursor()
+#             db.row_factory = lambda cursor, row: row[0]
+            cursor = db.cursor()
+            cursor.execute("SELECT video_height, mean_power, mean_cpu FROM veq_summary order by video_height;")
             values = cursor.fetchall()
         return values
     
