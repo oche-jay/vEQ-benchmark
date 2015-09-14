@@ -46,7 +46,7 @@ def makeDefaultDBFolder():
         os.makedirs(video_download_folder)
     return video_download_folder
 
-vlc_verbosity = -1
+vlc_verbosity = 2
 default_youtube_quality= 'bestvideo'
 benchmark_duration = 20#or -1 for length of video
 meter = None
@@ -196,7 +196,7 @@ def main(argv=None):
                                 
                         info_dict = ydl.extract_info(video, download=False)
                         video = getInfoDictValue("url", info_dict)
-                        video_title = info_dict['title']
+                        video_title = info_dict.get('title',"None")
                         video_data = str(json.dumps(info_dict)) 
                         video_codec = info_dict['format']
                         video_height = info_dict['height']
@@ -285,7 +285,12 @@ def main(argv=None):
     
     vEQdb.insertIntoVEQSummaryTable(summary_values)
 #           write this to a summary file json and a database
-    video_title = s = re.sub(r"[^\w\s]", '', video_title)
+    print video_title
+    try:
+    	video_title = s = re.sub(r"[^\w\s]", '', video_title)
+    except:
+	video_title = video
+	
     print "============================================="
     print "vEQ-Summary"
     print "============================================="
