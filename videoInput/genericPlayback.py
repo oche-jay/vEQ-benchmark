@@ -71,10 +71,10 @@ class GenericPlayback(object):
                 rss +=  mem_val.rss
 		
 
-             print "cpu " + str(cpu_val)
-             print "mem " + str(mempercent_val)
+             #print "cpu " + str(cpu_val)
+             #print "mem " + str(mempercent_val)
              marq_str = str.format("CPU: %3.1f%%%%\nMEM: %3.1f%%%%\n" % (cpu_val,mempercent_val)) #need to escape %% twice
-           
+             logging.debug(marq_str)
              
              if sys.platform.startswith("darwin"):
 #            Theres no way to capture this  on bsd unix apparently #
