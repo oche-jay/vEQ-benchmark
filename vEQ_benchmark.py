@@ -96,7 +96,7 @@ def main(argv=None):
     parser.add_argument("-D", "--Database-location", dest="db_loc", metavar ="location for database file or \'memory\'", help = "A absolute location for storing the database file ")
     parser.add_argument("-P", "--plot", dest="to_plot", action='store_true', help="Flag to set if this session should be plotted")
     parser.add_argument("-S", "--show", dest="to_show", action='store_true', help="Flag to set if the plot of this should be displayed on the screen after a session is completed")
-    parser.add_argument("-p", "--player", metavar="player", dest="system_player", default="vlc", help="The Player to use to playback video - default is VLC MediaPlayer")
+    parser.add_argument("-p", "--player", metavar="player", dest="system_player", default="libvlc", help="The Player to use to playback video - default is VLC MediaPlayer")
     parser.add_argument("--hwdecode", dest="hw_decode", action='store_true', help="VLC Specific, turn hardware decoding on")
 
 #     TODO: implement dynamic power metering VoltcraftMeter
@@ -224,7 +224,7 @@ def main(argv=None):
     
 #==========================================VLC VIDEO SPECIFIC =============== 
 #     if False:
-    if system_player == "vlc":
+    if system_player == "libvlc":
         from videoInput.veqplayback import VLCPlayback
         vlc_args = "--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq " + "--verbose " + str(vlc_verbosity)
         	
@@ -242,6 +242,7 @@ def main(argv=None):
 #         GenericPlaybackObject.startPlayback(benchmarkduration)
          from videoInput.genericPlayback import GenericPlayback
          generic_command = "/usr/bin/omxplayer"
+	 generic_command = '/usr/bin/vlc-wrapper --avcodec-hw=any'
          workload =  "../gopro.mp4" #          pass this from cmd line or something       
          genericPlayback =  GenericPlayback(workload=video,db=vEQdb,cmd=generic_command,meter=meter)
          genericPlayback.startPlayback(benchmark_duration)
