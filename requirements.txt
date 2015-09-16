@@ -4,3 +4,5 @@ psutil
 cython
 hidapi #hidapi depends on cython
 numpy
+scipy
+matplotlib

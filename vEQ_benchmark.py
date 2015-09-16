@@ -25,7 +25,6 @@ try:
 except:
     from util.pymediainfo import MediaInfo
         
-
 # //add youtube-dl to the python path
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)) , "youtube-dl"))
 
@@ -270,9 +269,15 @@ def main(argv=None):
     c = numpy.array(cpus)
     m = numpy.array(memorys)
     
-    mean_power = getMean(p[p>0])
+#     get rid of zeros and negatives
+    p = p[p>0]
+    c = c[c>0]
+    m = m[m>0]
+    
+    mean_power = getMean(p)
     mean_cpu =  getMean(c)
     mean_memory = getMean(m)
+    
     mean_gpu = -1 #TODO: IMplement GPU 
     mean_bandwidth = str(Decimal(data_transferred * 8) / Decimal(1000000* total_duration))
 
@@ -320,6 +325,7 @@ def main(argv=None):
     print "Disk Info: " + "Not Yet Implemented"
     print "Active NIC Info: " + "Not Yet Implemented"
     print "============================================="
+<<<<<<< HEAD
 #     to_plot = True
 #     to_show = False
 #     TODO implemtent GPU monitoring    
@@ -328,6 +334,17 @@ def main(argv=None):
     if True:
 #     if to_plot:
         makeSubPlot(start_time=start_time, figure_title=plot_title, cpus=cpus, memorys=memorys, bitrate=bitrate, powers=powers, gpus=gpus, to_show=to_show)
+=======
+    
+#     to_plot = False
+    to_show = True
+ 
+#     TODO implemtent GPU monitoring    
+    gpus=None
+    plot_title = str(video_codec) + "- (" + str(video_title) + ")"
+    if to_plot:
+        makeSubPlot(start_time=start_time, figure_title=plot_title, cpus=c, memorys=m, bitrate=b, powers=powers, gpus=gpus, to_show=to_show)
+>>>>>>> made minor refactorings such that negative values are not used in the
 
 if __name__ == '__main__':
     main()
