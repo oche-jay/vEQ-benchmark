@@ -362,13 +362,18 @@ class vEQ_database(object):
                 sys.exit()
         return values
     
-    def getDistinctVideoHeightfromDB(self):  
+    def getDistinctVideoHeightfromDB(self, min_height=0):  
         '''
-        Returns all distinct video_heights, and the mean power in the DB, ordered by the height
+        Returns all distinct video_heights greater than min_height, and the mean power in the DB, ordered by the height
         '''
         with self.db as db:
             cursor = db.cursor()
-            cursor.execute("SELECT cast(video_height as number) as video_height, avg(mean_power) as pow FROM veq_summary GROUP BY video_height ORDER BY video_height;")
+            cursor.execute("""
+            SELECT cast(video_height as number) as vh, avg(mean_power) as pow , count(video_height)
+            FROM veq_summary 
+            WHERE vh > ?
+            GROUP BY video_height ORDER BY vh;
+            """, [min_height])
             values = cursor.fetchall()  
         return values 
     
@@ -419,15 +424,25 @@ class vEQ_database(object):
             values = cursor.fetchall()
         return values
     
-    def getSummaryfromVeqDBbyHeight(self):
+    def getSummaryfromVeqDBbyHeight(self, min_cpu=0, min_power=0, min_height=0):
         '''
         Get individual readings for video_height, mean_power, mean_cpu from the veq_summary table
+        Only get values where the video height is greater than min_height(default 0), 
+        CPU is greater than min_cpu(e.g 2%) as anything less means its quite likely 
+        there was no video playback and Power Values greater than min_power e.g 2.5W for RPI  as it consumes around 2.7W)
         '''    
+    
         with self.db as db:
 #             cursor = db.cursor()
 #             db.row_factory = lambda cursor, row: row[0]
             cursor = db.cursor()
-            cursor.execute("SELECT video_height, mean_power, mean_cpu FROM veq_summary order by video_height;")
+            cursor.execute("""
+            SELECT cast(video_height as number) as vh, mean_power, mean_cpu FROM veq_summary 
+            WHERE vh > ? 
+            AND cast(mean_cpu as int) > ? 
+            AND cast(mean_power as int) > ?
+            ORDER by vh;
+            """, [min_height, min_cpu, min_power])
             values = cursor.fetchall()
         return values
     
