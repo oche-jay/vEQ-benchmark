@@ -1,9 +1,3 @@
-'''
-Created on 21 Sep 2015
-
-@author: oche
-'''
-
 """
 SI and TI Calculations
 Copyright (c) 2014 Alex Izvorski <aizvorski@gmail.com>
@@ -30,14 +24,8 @@ import os
 from subprocess import Popen
 import glob
 
-import niqe
-import psnr
-import reco
-import ssim
-import vifp
+from scipy import ndimage
 
-from scipy import ndimage, Inf
-from __builtin__ import len
 
 FFMPEG_LOC = "/usr/local/bin/ffmpeg"
 #import ssim_theano
@@ -88,71 +76,73 @@ def createMotionandSobelVideos():
 
 # createMotionandSobelVideos()
 # sys.exit()
-
-if ".yuv" in ref_file:
-    # Inputs are uncompressed video in YUV420 planar format
-    # Get resolution from file name
-    m = re.search(r"(\d+)x(\d+)", ref_file)
-    if not m:
-        print "Could not find resolution in file name: %s" % (ref_file)
-        exit(1)
-
-    width, height = int(m.group(1)), int(m.group(2))
-    print "Getting ST and TI of %s, resolution %d x %d" % (ref_file, width, height)
-
-    ref_fh = open(ref_file, "rb")
-#     dist_fh = open(dist_file, "rb")
-
-    frame_num = 0 
-    pref = 0
-    maxSI = 0
-    maxTI = 0
-    pmag = 0
+def getSITI(ref_file, makeVideo=true):
+     frame_num = 0 
+     pref = 0
+     maxSI = 0
+     maxTI = 0
+     pmag = 0
     
-    first_frame = True
+     if ".yuv" in ref_file:
+        # Inputs are uncompressed video in YUV420 planar format
+        # Get resolution from file name
+        m = re.search(r"(\d+)x(\d+)", ref_file)
+        if not m:
+            print "Could not find resolution in file name: %s" % (ref_file)
+            exit(1)
     
-    while True:
-        try:
-            ref, uref, vref = img_read_yuv(ref_fh, width, height)
-        except:
-            break
+        width, height = int(m.group(1)), int(m.group(2))
+        print "Getting ST and TI of %s, resolution %d x %d" % (ref_file, width, height)
     
-        dx = ndimage.sobel(ref, 0)  # horizontal derivative
-        dy = ndimage.sobel(ref, 1)  # vertical derivative    
-        mag= numpy.hypot(dx, dy) 
-        mag= numpy.array(mag, dtype=numpy.uint64)
-        mx = numpy.max(mag)
-        mag *= 255.0 / mx  # normalize (Q&D)
-        # magnitude
-
-        scipy.misc.imsave(str(frame_num)+'y_orig.jpg', ref)
-        scipy.misc.imsave(str(frame_num)+'u_orig.jpg', uref)
-        scipy.misc.imsave(str(frame_num)+'v_orig.jpg', vref)
-        scipy.misc.imsave(str(frame_num)+'sobel.jpg', mag)
-        scipy.misc.imsave(str(frame_num)+'motion.jpg', pref - ref)
-         
-#         print dx.std(), dy.std(), 
-        SI = mag.std()
-        TI = (ref - pref).std()
+        ref_fh = open(ref_file, "rb")    
+        first_frame = True
         
-        if first_frame:
-            first_frame = False
+        while True:
+            try:
+                ref, uref, vref = img_read_yuv(ref_fh, width, height)
+            except:
+                print "Error"
+                break
+        
+            dx = ndimage.sobel(ref, 0)  # horizontal derivative
+            dy = ndimage.sobel(ref, 1)  # vertical derivative    
+            mag= numpy.hypot(dx, dy) 
+            mag= numpy.array(mag, dtype=numpy.uint64)
+            mx = numpy.max(mag)
+
+            if makeVideo:
+                scipy.misc.imsave(str(frame_num)+'y_orig.jpg', ref)
+                scipy.misc.imsave(str(frame_num)+'u_orig.jpg', uref)
+                scipy.misc.imsave(str(frame_num)+'v_orig.jpg', vref)
+                scipy.misc.imsave(str(frame_num)+'sobel.jpg', mag)
+                scipy.misc.imsave(str(frame_num)+'motion.jpg', pref - ref)
+                 
+            SI = mag.std()
+            TI = (ref - pref).std()
+            
+            if first_frame:
+                first_frame = False
+                frame_num += 1
+                TI = 0
+                  
+            maxSI = max(maxSI, SI)
+            maxTI = max(maxTI, TI)
+            
+            print "Frame=%d SI=%f, TI=%f, max SI=%f, max TI=%f" % (frame_num, SI, TI, maxSI, maxTI)
             frame_num += 1
-            TI = 0
-              
-        maxSI = max(maxSI, SI)
-        maxTI = max(maxTI, TI)
+            pref = ref
+            pmag = mag
         
-        print "Frame=%d SI=%f, TI=%f, max SI=%f, max TI=%f" % (frame_num, SI, TI, maxSI, maxTI)
-        frame_num += 1
-        pref = ref
-        pmag = mag
-    res =  "%f, %f" % (maxSI, maxTI)
-    print res
-    createMotionandSobelVideos()
-    with open("results.txt", "a") as resfile:
-        resfile.write("%s %s\n" % (ref_file, res))
+        res =  "%f, %f" % (maxSI, maxTI)
+        print res
+        with open("results.txt", "a") as resfile:
+            resfile.write("%s %s\n" % (ref_file, res))
  
+        return maxSI, maxTI
+
+getSITI(ref_file)       
+createMotionandSobelVideos()
+    
     
   
 

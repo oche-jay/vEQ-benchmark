@@ -104,6 +104,7 @@ def scaledownYUV(video, orig_width=None, orig_height=None, target_width=None, ta
             print it, 
         print "\n"      
         p = Popen(command, env=ENV_DICT)
+        p.wa
         p.communicate(input)
     return outfile
     

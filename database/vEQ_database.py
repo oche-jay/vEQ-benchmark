@@ -10,6 +10,11 @@ import os
 import traceback
 from os.path import expanduser
 
+logging.basicConfig( 
+format = '[vEQ_database] %(levelname)-7.7s %(message)s'
+)
+
+
 
 class vEQ_database(object):
     '''
@@ -130,7 +135,7 @@ class vEQ_database(object):
             print db
             cursor = db.cursor() 
             cursor.executescript("SELECT name FROM sqlite_master WHERE type='table';")  
-            print tuple(cursor)
+            print "Tables in DB: %s" % str(tuple(cursor))
                       
     def getDB(self):
         return self.db
@@ -423,6 +428,18 @@ class vEQ_database(object):
             cursor.execute("SELECT video_height, mean_power , mean_cpu, video_name FROM veq_summary order by video_title;")
             values = cursor.fetchall()
         return values
+    
+    
+    def selectAllIndvidualReadings(self):
+        with self.db as db:
+            cursor = db.cursor()
+            cursor.execute("""
+            SELECT mean_cpu, mean_memory, mean_bandwidth, mean_power FROM veq_summary 
+            WHERE mean_power > 1 
+            """)
+            values = cursor.fetchall()
+            return values
+            
     
     def getSummaryfromVeqDBbyHeight(self, min_cpu=0, min_power=0, min_height=0):
         '''
