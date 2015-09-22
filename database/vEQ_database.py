@@ -297,7 +297,19 @@ class vEQ_database(object):
             data = cursor.execute("select *  from power_readings NATURAL LEFT OUTER JOIN ps_readings"
                            "where power_readings.video_info_FK = ?", (video_key_id))
      
-     
+    
+    def getQuerybyNameandHeight(self, video_name, video_height):
+        with self.db as db:
+            cursor = db.cursor()
+            cursor.execute("""
+            select video_name, video_height, mean_power as pow from veq_summary 
+            where video_name is ("%s")
+            and video_height in (%s) 
+            order by video_name
+            """ % (video_name, video_height))
+        values = cursor.fetchall()  
+        return values  
+        
     def getDistinctVideoCodecsfromDB(self):  
         '''
         Returns all distinct video_codecs, and the mean power in the DB, ordered by the average power
@@ -305,6 +317,63 @@ class vEQ_database(object):
         with self.db as db:
             cursor = db.cursor()
             cursor.execute("SELECT video_codec, avg(mean_power) as pow FROM veq_summary GROUP BY video_codec ORDER BY pow;")
+            values = cursor.fetchall()  
+        return values 
+    
+
+# <<<<<<< HEAD
+    def getDistinctColumnfromDBwithHeightFilter(self, column_name, height_filter):
+        '''
+        Returns columnname , mean power, and mean_cpu for a giveng height
+        '''
+        with self.db as db:
+            try:
+                cursor = db.cursor()
+                cursor.execute("""
+                SELECT %s , avg(mean_power) as pow, avg(mean_cpu) FROM veq_summary 
+                where %s is NOT NULL
+                and video_height in ( %s)
+                GROUP BY %s 
+                ORDER BY %s;
+                """ % (column_name, column_name, height_filter, column_name, column_name) )
+                values = cursor.fetchall() 
+            except:
+                traceback.print_exc()
+                sys.exit()
+        return values 
+     
+    def getDistinctColumnfromDB(self, column_name):  
+        '''
+        Returns all distinct COLUMN_NAME, and the mean power in the DB, ordered by the height, 
+        height_filter: optional paramaeter to get a certain height
+        '''
+        with self.db as db:
+            try:
+                cursor = db.cursor()
+                cursor.execute("""
+                SELECT %s , avg(mean_power) as pow FROM veq_summary 
+                where %s is NOT NULL
+                GROUP BY %s 
+                ORDER BY pow;
+                """ % (column_name, column_name,column_name))
+                values = cursor.fetchall() 
+            except:
+                traceback.print_exc()
+                sys.exit()
+        return values
+    
+    def getDistinctVideoHeightfromDB(self, min_height=0):  
+        '''
+        Returns all distinct video_heights greater than min_height, and the mean power in the DB, ordered by the height
+        '''
+        with self.db as db:
+            cursor = db.cursor()
+            cursor.execute("""
+            SELECT cast(video_height as number) as vh, avg(mean_power) as pow , count(video_height)
+            FROM veq_summary 
+            WHERE vh > ?
+            GROUP BY video_height ORDER BY vh;
+            """, [min_height])
             values = cursor.fetchall()  
         return values 
     
@@ -317,31 +386,89 @@ class vEQ_database(object):
 #             db.row_factory = lambda cursor, row: row[0]
             cursor = db.cursor()
 #             SELECT  distinct video_codec as vc,  avg(mean_power)  as pow, avg(mean_cpu) as cpu FROM veq_summary group by video_codec order by vc
-            cursor.execute("SELECT video_codec, mean_power , mean_cpu FROM veq_summary order by video_codec;")
+            cursor.execute("""
+             SELECT video_codec, mean_power, mean_cpu, video_name FROM veq_summary 
+             where video_name is NOT NULL
+             order by video_codec;
+             """)
             values = cursor.fetchall()
 #         i=0
 #         for v in values:
 #             i+=1
 #             print i,v
         return values
+
     
-    def getSummaryfromVeqDBbyHeight(self):
+    def getSummarybyMovieandHeight(self):
         '''
-        Get individual readings for video_height, mean_power, mean_cpu from the veq_summary table
+            Returns all the average power of the individual movies grouped by heights
+        '''
+        with self.db as db:
+            cursor = db.cursor
+            cursor.execute("""
+            select video_name, video_height, avg(mean_power) as pow, avg(mean_cpu), count(mean_power) as count from veq_summary 
+            where video_name is NOT NULL
+            group by video_name 
+            order by pow;
+            """)
+            
+    def getSummaryfromVeqDBbyTitle(self):
+        '''
+        Get individual readings for video_height, mean_power, mean_cpu, video_name from the veq_summary table
         '''    
         with self.db as db:
 #             cursor = db.cursor()
 #             db.row_factory = lambda cursor, row: row[0]
             cursor = db.cursor()
-#             SELECT  distinct video_codec as vc,  avg(mean_power)  as pow, avg(mean_cpu) as cpu FROM veq_summary group by video_codec order by vc
-            cursor.execute("SELECT video_height, mean_power , mean_cpu FROM veq_summary order by video_height;")
-
+            cursor.execute("SELECT video_height, mean_power , mean_cpu, video_name FROM veq_summary order by video_title;")
             values = cursor.fetchall()
-#         i=0
-#         for v in values:
-#             i+=1
-#             print i,v
         return values
+    
+    def getSummaryfromVeqDBbyHeight(self, min_cpu=0, min_power=0, min_height=0):
+        '''
+        Get individual readings for video_height, mean_power, mean_cpu from the veq_summary table
+        Only get values where the video height is greater than min_height(default 0), 
+        CPU is greater than min_cpu(e.g 2%) as anything less means its quite likely 
+        there was no video playback and Power Values greater than min_power e.g 2.5W for RPI  as it consumes around 2.7W)
+        '''    
+    
+        with self.db as db:
+#             cursor = db.cursor()
+#             db.row_factory = lambda cursor, row: row[0]
+            cursor = db.cursor()
+            cursor.execute("""
+            SELECT cast(video_height as number) as vh, mean_power, mean_cpu FROM veq_summary 
+            WHERE vh > ? 
+            AND cast(mean_cpu as int) > ? 
+            AND cast(mean_power as int) > ?
+            ORDER by vh;
+            """, [min_height, min_cpu, min_power])
+            values = cursor.fetchall()
+        return values
+    
+    def getSummaryofValuefromVeqDBbyHeight(self, colname):
+        '''
+        Get individual readings for video_height, \'colname\', mean_cpu from the veq_summary table
+        '''    
+        with self.db as db:
+#             cursor = db.cursor()
+#             db.row_factory = lambda cursor, row: row[0]
+            cursor = db.cursor()
+            cursor.execute("SELECT video_height, mean_power, mean_cpu FROM veq_summary order by video_height;")
+            values = cursor.fetchall()
+        return values
+    
+#     def getSummaryfromVideoTitle(self):
+#         '''
+#         Get individual readings for video_height, mean_power, mean_cpu from the veq_summary table
+#         '''    
+#         with self.db as db:
+#     #             cursor = db.cursor()
+#     #             db.row_factory = lambda cursor, row: row[0]
+#             cursor = db.cursor()
+#             cursor.execute("SELECT video, avg(mean_power) , mean_cpu FROM veq_summary order by video_height;")
+#             values = cursor.fetchall()
+#         return values
         
     
 if __name__ == '__main__':
@@ -362,6 +489,11 @@ if __name__ == '__main__':
     
     vEQdb.getSummaryfromVeqDB()
     vEQdb.getDistinctVideoCodecsfromDB()
+    
+    vals = vEQdb.getDistinctColumnfromDB("video_name")
+    
+    for v in vals:
+        print v
 
 
         

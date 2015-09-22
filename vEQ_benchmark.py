@@ -25,7 +25,6 @@ try:
 except:
     from util.pymediainfo import MediaInfo
         
-
 # //add youtube-dl to the python path
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)) , "youtube-dl"))
 
@@ -46,7 +45,7 @@ def makeDefaultDBFolder():
         os.makedirs(video_download_folder)
     return video_download_folder
 
-vlc_verbosity = -1
+vlc_verbosity = 2
 default_youtube_quality= 'bestvideo'
 benchmark_duration = 20#or -1 for length of video
 meter = None
@@ -54,7 +53,7 @@ meter = None
 default_folder= makeDefaultDBFolder()
 default_database = os.path.join( default_folder, "vEQ_db.sqlite")
 
-logging.getLogger().setLevel(logging.DEBUG)
+logging.getLogger().setLevel(logging.ERROR)
 
 # Some available Formats for Youtube
 # format code  extension  resolution note
@@ -90,14 +89,15 @@ logging.getLogger().setLevel(logging.DEBUG)
 def main(argv=None):
     parser = argparse.ArgumentParser(description="vEQ-benchmark: A Benchmarking and Measurement Tool for Video")
     parser.add_argument("video" , metavar="VIDEO", help="A local file or URL(Youtube, Vimeo etc.) for the video to be benchmarked")
-    parser.add_argument("-y" , "--youtube-format", metavar="format", dest="youtube_quality", default=default_youtube_quality, help="For Youtube videos, a value that corressponds to the quality level see youtube-dl for details")
-    parser.add_argument("-m" , "--power-meter", metavar="meter", dest="meter", default='voltcraft',   help="The meter to use for power measurement TODO: Expand this")
+    parser.add_argument("-y", "--youtube-format", metavar="format", dest="youtube_quality", default=default_youtube_quality, help="For Youtube videos, a value that corressponds to the quality level see youtube-dl for details")
+    parser.add_argument("-m", "--power-meter", metavar="meter", dest="meter", default='voltcraft',   help="The meter to use for power measurement TODO: Expand this")
     parser.add_argument("-d", "--duration", metavar="Duration", dest="benchmark_duration", default=120, type=int, help="The length of time in seconds for the benchmark to run.")
     parser.add_argument("-D", "--Database-location", dest="db_loc", metavar ="location for database file or \'memory\'", help = "A absolute location for storing the database file ")
     parser.add_argument("-P", "--plot", dest="to_plot", action='store_true', help="Flag to set if this session should be plotted")
     parser.add_argument("-S", "--show", dest="to_show", action='store_true', help="Flag to set if the plot of this should be displayed on the screen after a session is completed")
-    parser.add_argument("-p","--player", metavar="player", dest="system_player", default="vlc", help="The Player to use to playback video - default is VLC MediaPlayer")
-    
+    parser.add_argument("-p", "--player", metavar="player", dest="system_player", default="libvlc", help="The Player to use to playback video - default is VLC MediaPlayer")
+    parser.add_argument("--hwdecode", dest="hw_decode", action='store_true', help="VLC Specific, turn hardware decoding on")
+
 #     TODO: implement dynamic power metering VoltcraftMeter
     args = parser.parse_args()    
     video = args.video
@@ -108,6 +108,7 @@ def main(argv=None):
     to_plot = args.to_plot
     m = args.meter
     system_player = args.system_player
+    hw_decode = args.hw_decode
     
     
     video_title = None
@@ -124,9 +125,11 @@ def main(argv=None):
     
     logging.info("Started VEQ_Benchmark")
     
+    #TODO: Extract this from here
     implementedPowerMeters = {
                               "voltcraft": VoltcraftMeter()
                             }
+    
     meter = implementedPowerMeters.get(m,None) 
     
 #    can inject dependency here i.e power meter or smc or bios or batterty
@@ -156,7 +159,7 @@ def main(argv=None):
         logging.error('Error: %s file not readable' % video)
         sys.exit(1)
      
-    try: 
+    try:
         if not validURLMatch(video): 
             logging.debug("Found regular video - using MediaInfo to extract details")  
             video_url = video
@@ -192,7 +195,7 @@ def main(argv=None):
                                 
                         info_dict = ydl.extract_info(video, download=False)
                         video = getInfoDictValue("url", info_dict)
-                        video_title = info_dict['title']
+                        video_title = info_dict.get('title',"None")
                         video_data = str(json.dumps(info_dict)) 
                         video_codec = info_dict['format']
                         video_height = info_dict['height']
@@ -220,10 +223,14 @@ def main(argv=None):
     
 #==========================================VLC VIDEO SPECIFIC =============== 
 #     if False:
-    if system_player == "vlc":
+    if system_player == "libvlc":
         from videoInput.veqplayback import VLCPlayback
         vlc_args = "--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq " + "--verbose " + str(vlc_verbosity)
-        vEQPlayback = VLCPlayback(video,vEQdb,vlc_args,meter)
+        	
+	if hw_decode:
+		vlc_args = vlc_args + "--avcodec-hw=any"
+
+	vEQPlayback = VLCPlayback(video,vEQdb,vlc_args,meter)
     
         logging.debug("Starting Playback with VLC")
     
@@ -233,7 +240,8 @@ def main(argv=None):
 #         use subprocess to start video player and montioring!
 #         GenericPlaybackObject.startPlayback(benchmarkduration)
          from videoInput.genericPlayback import GenericPlayback
-         generic_command = "/Applications/VLC.app/Contents/MacOS/VLC -vvv"
+         generic_command = "/usr/bin/omxplayer"
+	 generic_command = '/usr/bin/vlc-wrapper --avcodec-hw=any'
          workload =  "../gopro.mp4" #          pass this from cmd line or something       
          genericPlayback =  GenericPlayback(workload=video,db=vEQdb,cmd=generic_command,meter=meter)
          genericPlayback.startPlayback(benchmark_duration)
@@ -261,9 +269,15 @@ def main(argv=None):
     c = numpy.array(cpus)
     m = numpy.array(memorys)
     
-    mean_power = getMean(p[p>0])
+#     get rid of zeros and negatives
+    p = p[p>0]
+    c = c[c>0]
+    m = m[m>0]
+    
+    mean_power = getMean(p)
     mean_cpu =  getMean(c)
     mean_memory = getMean(m)
+    
     mean_gpu = -1 #TODO: IMplement GPU 
     mean_bandwidth = str(Decimal(data_transferred * 8) / Decimal(1000000* total_duration))
 
@@ -277,7 +291,12 @@ def main(argv=None):
     
     vEQdb.insertIntoVEQSummaryTable(summary_values)
 #           write this to a summary file json and a database
-    video_title = s = re.sub(r"[^\w\s]", '', video_title)
+    print video_title
+    try:
+    	video_title = s = re.sub(r"[^\w\s]", '', video_title)
+    except:
+	video_title = video
+	
     print "============================================="
     print "vEQ-Summary"
     print "============================================="
@@ -306,6 +325,7 @@ def main(argv=None):
     print "Disk Info: " + "Not Yet Implemented"
     print "Active NIC Info: " + "Not Yet Implemented"
     print "============================================="
+<<<<<<< HEAD
 #     to_plot = True
 #     to_show = False
 #     TODO implemtent GPU monitoring    
@@ -314,6 +334,17 @@ def main(argv=None):
     if True:
 #     if to_plot:
         makeSubPlot(start_time=start_time, figure_title=plot_title, cpus=cpus, memorys=memorys, bitrate=bitrate, powers=powers, gpus=gpus, to_show=to_show)
+=======
+    
+#     to_plot = False
+    to_show = True
+ 
+#     TODO implemtent GPU monitoring    
+    gpus=None
+    plot_title = str(video_codec) + "- (" + str(video_title) + ")"
+    if to_plot:
+        makeSubPlot(start_time=start_time, figure_title=plot_title, cpus=c, memorys=m, bitrate=b, powers=powers, gpus=gpus, to_show=to_show)
+>>>>>>> made minor refactorings such that negative values are not used in the
 
 if __name__ == '__main__':
     main()
