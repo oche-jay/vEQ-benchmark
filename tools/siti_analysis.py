@@ -15,7 +15,14 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+import sys
 
+if __package__ is None and not hasattr(sys, "frozen"):
+    # direct call of __main__.py
+    import os.path
+    path = os.path.realpath(os.path.abspath(__file__))
+    sys.path.append(os.path.dirname(os.path.dirname(path)))
+    
 import numpy
 import re
 import scipy.misc
