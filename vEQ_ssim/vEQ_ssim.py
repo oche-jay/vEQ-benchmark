@@ -132,13 +132,12 @@ def convertToYUV(video, **kwargs):
         fileName = re.sub(r"[\W]+", '_', fileName).lower()
         fileName = "_".join([codec,str(width),str(height),fileName])
         outfile = os.path.join(filePath, fileName + '.yuv') 
-   
         
         if os.path.exists((outfile)):
                 logging.warn("File already downloaded at : " + outfile)
                 
         else:
-            command = ["ffmpeg", "-i", video, outfile ]
+            command = ["/usr/bin/ffmpeg", "-i", video, outfile ]
             p = Popen(command, env=ENV_DICT)
             p.communicate(input)
         
@@ -283,8 +282,6 @@ def main(argv=None):
 #                       DATABASE SETUP ENDS                                                           #  
 #=====================================================================================================# 
 
- 
-
     if not validURLMatch(video) and not (os.access(video, os.R_OK)):
         print('Error: %s file not readable' % video)
         logging.error('Error: %s file not readable' % video)
@@ -313,7 +310,6 @@ def main(argv=None):
     if not validURLMatch(video) and (os.access(video, os.R_OK)):
         logging.debug("Found regular video")  
         codec, testvideo_width, testvideo_height = getLocalVideoInfo(video)
-        
         test_yuv_file = convertToYUV(video, codec=codec, testvideo_width=testvideo_width, testvideo_height=testvideo_height)
 
     if ONLINE_VIDEO: #youtube

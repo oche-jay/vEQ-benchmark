@@ -171,8 +171,8 @@ def processPowerandCPUdata(x_values, summary_by, targets):
          
 def plotPowerandCPU(x_values, summary_by, targets=[], **kwargs):
     """
-    x_values is a list or tuple of distinct values in the zeroth column for the x axis
-    targets is a list of matches for VALUES that you want to see in the plot, if not specified everything will be shown
+        X_values is a list or tuple of distinct values in the zeroth column for the x axis
+        targets is a list of matches for VALUES that you want to see in the plot, if not specified everything will be shown
     """
     ts = time.time()
     st = datetime.datetime.fromtimestamp(ts).strftime('%H%M%S')
@@ -189,16 +189,12 @@ def plotPowerandCPU(x_values, summary_by, targets=[], **kwargs):
     cpus = []
     cpus_confs = []
     
-    print summary_by
+#     print summary_by
     vcs, powers, power_confs, cpus, cpus_confs =  processPowerandCPUdata(x_values, summary_by, targets)
-    
-    print vcs
-    print powers
-    print cpus_confs
     
     ind = numpy.arange(len(vcs))
     ind = ind+0.5  # the x locations for the groups
-    width = 0.35       # the width of the bars
+    width = 0.35   # the width of the bars
     
     fig, ax1 = plt.subplots()
 #     plt.xticks(rotation=90
@@ -217,7 +213,6 @@ def plotPowerandCPU(x_values, summary_by, targets=[], **kwargs):
     ax2.set_ylabel('CPU(%)',color='r')
      
     # You can specify a rotation for the tick labels in degrees or with keywords.
-    
     plt.xticks(ind+0.4, vcs)
     # plt.setp(ax1[1].xaxis.get_majorticklabels(), )
 
@@ -232,9 +227,7 @@ def plotPowerandCPU(x_values, summary_by, targets=[], **kwargs):
     
     plt.show()       
     print time.time()-s
-    
-
-    
+        
 def plotBW(x_values, summary_by_codec, targets=[], **kwargs):
     """
     values is a list or tuple of distinct values in the zeroth column for the x asis 

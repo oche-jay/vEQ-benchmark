@@ -325,16 +325,16 @@ def main(argv=None):
     print "Disk Info: " + "Not Yet Implemented"
     print "Active NIC Info: " + "Not Yet Implemented"
     print "============================================="
-<<<<<<< HEAD
+
 #     to_plot = True
 #     to_show = False
 #     TODO implemtent GPU monitoring    
-    gpus=None
-    plot_title = str(video_codec) + "- (" + str(video_title) + ")"
-    if True:
-#     if to_plot:
-        makeSubPlot(start_time=start_time, figure_title=plot_title, cpus=cpus, memorys=memorys, bitrate=bitrate, powers=powers, gpus=gpus, to_show=to_show)
-=======
+#     gpus=None
+#     plot_title = str(video_codec) + "- (" + str(video_title) + ")"
+#     if True:
+# #     if to_plot:
+#         makeSubPlot(start_time=start_time, figure_title=plot_title, cpus=cpus, memorys=memorys, bitrate=bitrate, powers=powers, gpus=gpus, to_show=to_show)
+
     
 #     to_plot = False
     to_show = True
@@ -343,8 +343,8 @@ def main(argv=None):
     gpus=None
     plot_title = str(video_codec) + "- (" + str(video_title) + ")"
     if to_plot:
-        makeSubPlot(start_time=start_time, figure_title=plot_title, cpus=c, memorys=m, bitrate=b, powers=powers, gpus=gpus, to_show=to_show)
->>>>>>> made minor refactorings such that negative values are not used in the
+        makeSubPlot(start_time=start_time, figure_title=plot_title, cpus=c, memorys=m, bitrate=bitrate, powers=powers, gpus=gpus, to_show=to_show)
+
 
 if __name__ == '__main__':
     main()
