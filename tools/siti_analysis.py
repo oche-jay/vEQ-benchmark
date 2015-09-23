@@ -21,13 +21,19 @@ import re
 import scipy.misc
 import sys
 import os
+import logging
 from subprocess import Popen
 import glob
+import traceback
 
 from scipy import ndimage
-
+from vEQ_ssim.vEQ_ssim import convertToYUV 
+from __main__ import traceback
 
 FFMPEG_LOC = "/usr/local/bin/ffmpeg"
+
+SI_array= []
+TI_array = []
 #import ssim_theano
 def img_greyscale(img):
     return 0.299 * img[:,:,0] + 0.587 * img[:,:,1] + 0.114 * img[:,:,2]
@@ -38,8 +44,6 @@ def img_read_yuv(src_file, width, height):
     u_img = numpy.fromfile(src_file, dtype=numpy.uint8, count=((width/2) * (height/2))).reshape( (height/2, width/2) )
     v_img = numpy.fromfile(src_file, dtype=numpy.uint8, count=((width/2) * (height/2))).reshape( (height/2, width/2) )
     return (y_img, u_img, v_img)
-
-ref_file = sys.argv[1]
 
 def createMotionandSobelVideos():
     j = glob.glob1(os.getcwd(), '*sobel*.jpg')
@@ -76,73 +80,116 @@ def createMotionandSobelVideos():
 
 # createMotionandSobelVideos()
 # sys.exit()
-def getSITI(ref_file, makeVideo=true):
-     frame_num = 0 
-     pref = 0
-     maxSI = 0
-     maxTI = 0
-     pmag = 0
+def getSITI(ref_file, makeVideo=True):
+    width = 0 
+    height = 0
+    frame_num = 0 
+    pref = 0
+    maxSI = 0
+    maxTI = 0
+    pmag = 0
+   
+   
     
-     if ".yuv" in ref_file:
+    if ".yuv" in ref_file:
         # Inputs are uncompressed video in YUV420 planar format
         # Get resolution from file name
         m = re.search(r"(\d+)x(\d+)", ref_file)
+        
         if not m:
             print "Could not find resolution in file name: %s" % (ref_file)
             exit(1)
     
         width, height = int(m.group(1)), int(m.group(2))
+        print width, height
         print "Getting ST and TI of %s, resolution %d x %d" % (ref_file, width, height)
+    else:
+        ref_file = convertToYUV(ref_file)
     
-        ref_fh = open(ref_file, "rb")    
-        first_frame = True
+    ref_fh = open(ref_file, "rb")    
+    first_frame = True
         
-        while True:
-            try:
-                ref, uref, vref = img_read_yuv(ref_fh, width, height)
-            except:
-                print "Error"
-                break
+    while True:
+        try:
+            logging.debug("REading YUV frame")
+            ref, uref, vref = img_read_yuv(ref_fh, width, height)
+        except:
+            traceback.print_exc()
+            break
+    
+        dx = ndimage.sobel(ref, 0)  # horizontal derivative
+        dy = ndimage.sobel(ref, 1)  # vertical derivative    
+        mag= numpy.hypot(dx, dy) 
+        mag= numpy.array(mag, dtype=numpy.uint64)
+        mx = numpy.max(mag)
+  
+        if makeVideo:
+#             logging.debug("Saving image to %s " %  os.getcwd())
+#             scipy.misc.imsave(str(frame_num)+'y_orig.jpg', ref)
+#             scipy.misc.imsave(str(frame_num)+'u_orig.jpg', uref)
+#             scipy.misc.imsave(str(frame_num)+'v_orig.jpg', vref)
+            scipy.misc.imsave(str(frame_num)+'sobel.jpg', mag)
+            scipy.misc.imsave(str(frame_num)+'motion.jpg', pref - ref)
+             
+        SI = mag.std()
+        TI = (ref - pref).std()
         
-            dx = ndimage.sobel(ref, 0)  # horizontal derivative
-            dy = ndimage.sobel(ref, 1)  # vertical derivative    
-            mag= numpy.hypot(dx, dy) 
-            mag= numpy.array(mag, dtype=numpy.uint64)
-            mx = numpy.max(mag)
-
-            if makeVideo:
-                scipy.misc.imsave(str(frame_num)+'y_orig.jpg', ref)
-                scipy.misc.imsave(str(frame_num)+'u_orig.jpg', uref)
-                scipy.misc.imsave(str(frame_num)+'v_orig.jpg', vref)
-                scipy.misc.imsave(str(frame_num)+'sobel.jpg', mag)
-                scipy.misc.imsave(str(frame_num)+'motion.jpg', pref - ref)
-                 
-            SI = mag.std()
-            TI = (ref - pref).std()
-            
-            if first_frame:
-                first_frame = False
-                frame_num += 1
-                TI = 0
-                  
-            maxSI = max(maxSI, SI)
-            maxTI = max(maxTI, TI)
-            
-            print "Frame=%d SI=%f, TI=%f, max SI=%f, max TI=%f" % (frame_num, SI, TI, maxSI, maxTI)
+        SI_array.append(SI)
+        TI_array.append(TI)
+        
+        if first_frame:
+            first_frame = False
             frame_num += 1
-            pref = ref
-            pmag = mag
+            TI = 0
+              
+        maxSI = max(maxSI, SI)
+        maxTI = max(maxTI, TI)
         
+        print "Frame=%d SI=%f, TI=%f, max SI=%f, max TI=%f" % (frame_num, SI, TI, maxSI, maxTI)
+        frame_num += 1
+        pref = ref
+        pmag = mag
+    
         res =  "%f, %f" % (maxSI, maxTI)
-        print res
+    
         with open("results.txt", "a") as resfile:
             resfile.write("%s %s\n" % (ref_file, res))
- 
-        return maxSI, maxTI
+        
+    return maxSI, maxTI
 
-getSITI(ref_file)       
-createMotionandSobelVideos()
+def main():
+    logging.basicConfig( 
+    format = '[vEQ_SITI analyis] %(levelname)-7.7s %(message)s'
+    )
+    logging.getLogger().setLevel(logging.ERROR)
+    ref_file = sys.argv[1]
+    getSITI(ref_file, makeVideo=False) 
+
+    import matplotlib.pyplot as plt
     
-    
-  
+#     plt.plot(SI_array, label="SI")
+#     plt.plot(TI_array, label="TI")
+#     plt.show()
+#           
+#     createMotionandSobelVideos()
+
+PROFILE = True   
+if PROFILE:
+    import cProfile
+    import pstats
+    import os
+    if not os.path.exists("../profile"): 
+        os.makedirs("../profile")
+    sys.stderr.write("Starting Profiling\n")
+    profile_filename = "../profile/siti_analysis.txt"
+    cProfile.run('main()',profile_filename)
+    statsfile =  open("../profile/siti_anlaysis_stats.txt", "wb")
+    p = pstats.Stats(profile_filename, stream=statsfile)
+    stats = p.strip_dirs().sort_stats('cumulative')
+    stats.print_stats()
+    statsfile.close()
+    sys.exit(0)
+else:
+    sys.exit(main())   
+ 
 
