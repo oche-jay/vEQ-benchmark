@@ -55,37 +55,6 @@ default_database = os.path.join( default_folder, "vEQ_db.sqlite")
 
 logging.getLogger().setLevel(logging.ERROR)
 
-# Some available Formats for Youtube
-# format code  extension  resolution note
-# # 140          m4a        audio only DASH audio  129k , m4a_dash container, aac  @128k (44100Hz), 3.89MiB
-# 171          webm       audio only DASH audio  145k , audio@128k (44100Hz), 3.97MiB
-# 141          m4a        audio only DASH audio  255k , m4a_dash container, aac  @256k (44100Hz), 7.72MiB
-# 160          mp4        256x144    DASH video  110k , 15fps, video only, 3.13MiB
-# 278          webm       256x144    DASH video  117k , webm container, VP9, 15fps, video only, 2.67MiB
-# 133          mp4        426x240    DASH video  247k , 30fps, video only, 6.99MiB
-# 242          webm       426x240    DASH video  264k , 30fps, video only, 5.99MiB
-# 243          webm       640x360    DASH video  493k , 30fps, video only, 11.22MiB
-# 134          mp4        640x360    DASH video  648k , 30fps, video only, 13.84MiB
-# 244          webm       854x480    DASH video  932k , 30fps, video only, 20.44MiB
-# 135          mp4        854x480    DASH video 1189k , 30fps, video only, 26.78MiB
-# 247          webm       1280x720   DASH video 1898k , 30fps, video only, 41.76MiB
-# 136          mp4        1280x720   DASH video 2368k , 30fps, video only, 52.74MiB
-# 248          webm       1920x1080  DASH video 3557k , 30fps, video only, 72.85MiB
-# 137          mp4        1920x1080  DASH video 4571k , 30fps, video only, 98.81MiB
-# 264          mp4        2560x1440  DASH video 10898k , 30fps, video only, 234.73MiB
-# 271          webm       2560x1440  DASH video 15630k , 30fps, video only, 222.74MiB
-# 266          mp4        3840x2160  DASH video 22239k , h264, 30fps, video only, 547.67MiB
-# 313          webm       3840x2160  DASH video 26253k , VP9, 30fps, video only, 449.06MiB
-# 138          mp4        3840x2160  DASH video 26455k , 30fps, video only, 610.05MiB
-# 272          webm       3840x2160  DASH video 29628k , 30fps, video only, 533.46MiB
-# 17           3gp        176x144    
-# 36           3gp        320x240    
-# 5            flv        400x240    
-# 43           webm       640x360    
-# 18           mp4        640x360    
-# 22           mp4        1280x720   (best)
-
-
 def main(argv=None):
     parser = argparse.ArgumentParser(description="vEQ-benchmark: A Benchmarking and Measurement Tool for Video")
     parser.add_argument("video" , metavar="VIDEO", help="A local file or URL(Youtube, Vimeo etc.) for the video to be benchmarked")
@@ -239,12 +208,14 @@ def main(argv=None):
     else:
 #         use subprocess to start video player and montioring!
 #         GenericPlaybackObject.startPlayback(benchmarkduration)
-         from videoInput.genericPlayback import GenericPlayback
-         generic_command = "/usr/bin/omxplayer"
-	 generic_command = '/usr/bin/vlc-wrapper --avcodec-hw=any'
-         workload =  "../gopro.mp4" #          pass this from cmd line or something       
-         genericPlayback =  GenericPlayback(workload=video,db=vEQdb,cmd=generic_command,meter=meter)
-         genericPlayback.startPlayback(benchmark_duration)
+        from videoInput.genericPlayback import GenericPlayback
+        generic_command = "/usr/bin/omxplayer"
+	     
+        generic_command = '/usr/bin/vlc-wrapper --avcodec-hw=any'
+        generic_command = 'start chrome'
+        workload =  "../gopro.mp4" #          pass this from cmd line or something       
+        genericPlayback =  GenericPlayback(workload=video,db=vEQdb,cmd=generic_command,meter=meter)
+        genericPlayback.startPlayback(benchmark_duration)
   
     end_time = time.time()
     total_duration = end_time - start_time
@@ -335,7 +306,6 @@ def main(argv=None):
 # #     if to_plot:
 #         makeSubPlot(start_time=start_time, figure_title=plot_title, cpus=cpus, memorys=memorys, bitrate=bitrate, powers=powers, gpus=gpus, to_show=to_show)
 
-    
 #     to_plot = False
     to_show = True
  

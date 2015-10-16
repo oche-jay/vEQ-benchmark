@@ -28,7 +28,8 @@ class GenericPlayback(object):
         '''
         self.cmd = cmd
         self.workload = workload
-        self.args = shlex.split(cmd + " " + workload)
+        self.args = shlex.split(cmd + " " + workload, whitespace_split=False)
+        print self.args
         self.db = db
         self.meter = meter
         self.duration = None
@@ -36,94 +37,83 @@ class GenericPlayback(object):
         self.polling_interval = 1
         self.proc = None
         
-        
         ENV_DICT = os.environ
         logging.debug("Path: " + ENV_DICT["PATH"])  
 #         "add expected location for known locations of"
         
     def startPlayback(self,duration=None):
-         ENV_DICT = os.environ
-#  	 print ENV_DICT["PATH"]
-#	 print self.args
-	 self.playstart_time = time.time() 
-         logging.debug(self.args)
-	 self.proc = px = psutil.Popen(self.args, stdout=PIPE)
-         logging.debug(px.cpu_percent(interval=0.1))
-         count = 0
+        ENV_DICT = os.environ
+        print ENV_DICT
+        self.playstart_time = time.time() 
+        logging.debug(self.args)
+        print sys.platform
+        if sys.platform.startswith("win"):
+            self.proc = px = psutil.Popen(self.args, stdout=PIPE, shell=True)
+        else:
+            self.proc = px = psutil.Popen(self.args, stdout=PIPE)
+        logging.debug(px.cpu_percent(interval=0.1))
+        count = 0
 	
-         while True:
-	    # print "count is: " + str(count)
-            # if duration and count >= duration:
-            #   break
+        while True:
+            timestamp = loop_starttime = time.time()
+            sys_index_FK = self.db.sysinfo_index
+            video_index_FK = self.db.videoinfo_index   
+            
+            cpu_val = px.cpu_percent()
+            mempercent_val = px.memory_percent()
+            mem_val = px.memory_info()
+            rss =  mem_val.rss
              
-             timestamp = loop_starttime = time.time()
-             sys_index_FK = self.db.sysinfo_index
-             video_index_FK = self.db.videoinfo_index   
-             
-             cpu_val = px.cpu_percent()
-             mempercent_val = px.memory_percent()
-             mem_val = px.memory_info()
-             rss =  mem_val.rss
-             
-	     for proc in px.children(recursive=True):
-             	cpu_val += proc.cpu_percent()
+            for proc in px.children(recursive=True):
+                cpu_val += proc.cpu_percent()
                 mempercent_val += proc.memory_percent()
                 rss +=  mem_val.rss
-		
 
-             #print "cpu " + str(cpu_val)
-             #print "mem " + str(mempercent_val)
-             marq_str = str.format("CPU: %3.1f%%%%\nMEM: %3.1f%%%%\n" % (cpu_val,mempercent_val)) #need to escape %% twice
-             logging.debug(marq_str)
-             
-             if sys.platform.startswith("darwin"):
+            if sys.platform.startswith("darwin"):
 #            Theres no way to capture this  on bsd unix apparently #
                 io_read = -1
                 io_write = -1
-             else:
+            else:
                 io_read = px.io_counters().read_bytes
                 io_write = px.io_counters().write_bytes
   
-             if self.meter is not None:
+            if self.meter is not None:
                 power_val = self.meter.getReading()
                 logging.debug("Got power measurement: " +  str(power_val))
                 power_v = float(power_val)
-             else:
+            else:
                 power_val = -1
                 power_v = -1
+            
+            sent_now = psutil.net_io_counters().bytes_sent
+            recv_now = psutil.net_io_counters().bytes_recv
                 
-             marq_str = str.format("CPU: %3.1f%%%%\nMEM: %3.1f%%%%\nPOWR: %3.1fW\n" % (cpu_val,mempercent_val,power_val)) #need to escape %% twice
+            marq_str = str.format("CPU: %3.1f%%%%\nMEM: %3.1f%%%%\nPOWR: %3.1fW\n" % (cpu_val,mempercent_val,power_val)) #need to escape %% twice
 
-
-             sent_now = psutil.net_io_counters().bytes_sent
-             recv_now = psutil.net_io_counters().bytes_recv
-       
-             values = [timestamp, cpu_val, mempercent_val, rss, sent_now, recv_now, io_read, io_write, sys_index_FK, video_index_FK]
-             powers = [timestamp,power_v,sys_index_FK, video_index_FK] 
-             self.db.insertIntoReadingsTable(values)
-             self.db.insertIntoPowerTable(powers)
+            values = [timestamp, cpu_val, mempercent_val, rss, sent_now, recv_now, io_read, io_write, sys_index_FK, video_index_FK]
+            powers = [timestamp,power_v,sys_index_FK, video_index_FK] 
+            self.db.insertIntoReadingsTable(values)
+            self.db.insertIntoPowerTable(powers)
              
-             count+=1
-	     now = time.time()
-	     elapsed = now - self.playstart_time 
-	     if duration and  elapsed  >= duration:
-		break 
+            count+=1
+            now = time.time()
+            elapsed = now - self.playstart_time 
+            if duration and  elapsed  >= duration:
+                break 
              
-	     # wait for the time left to complete one second, 
-             # if it's a negative number, it means the loop took 
-	     # longer than 1 second to complete. 
-	     # In this case no need to wait at all
-	     time.sleep(max(0,1-(now-loop_starttime)))
+    	    # wait for the time in milliseconds left to complete one second or not at all 
+    	    time.sleep(max(0,1-(now-loop_starttime)))
 
-         self.stopPlayback()
-         return 1
+        self.stopPlayback()
+        return 1
     
     
     def stopPlayback(self):
         px = self.proc
-        for proc in px.children(recursive=True):
-            proc.kill()
-        px.kill()
+        if px:
+            for proc in px.children(recursive=True):
+                proc.kill()
+            px.kill()
         
 
 if __name__ == '__main__':
@@ -134,14 +124,16 @@ if __name__ == '__main__':
         on Windows or something, 
         In any case, this causes problems if not set
         '''
+    
         workload = "/home/system/480p_transformerts.mp4"
+        workload = "http://videoserv.cs.st-andrews.ac.uk/dash.js/samples/dash-if-reference-player/index.html"
         youtube_quality = ""
-        args = ["/usr/bin/omxplayer", workload]
+       
         db = DB.vEQ_database("memory")
         cmd= "/Applications/VLC.app/Contents/MacOS/VLC -vv "  + workload
-        args = shlex.split(cmd)
-        print args
-        gpb = GenericPlayback(args=args,db=db)
+        cmd = r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+
+        gpb = GenericPlayback(cmd=cmd,workload=workload,db=db)
         try:
             gpb.startPlayback(20) 
             print "here"
