@@ -179,7 +179,7 @@ def main(argv=None):
             
     except:
         error = sys.exc_info()
-        logging.error("Unexpected error: " + str(error))
+        logging.error("Could not retrive video format information: " + str(error))
         video_data = str(error)
         video_codec, video_height, video_width = "Null",-1,-1
 
@@ -196,10 +196,10 @@ def main(argv=None):
         from videoInput.veqplayback import VLCPlayback
         vlc_args = "--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq " + "--verbose " + str(vlc_verbosity)
         	
-	if hw_decode:
-		vlc_args = vlc_args + "--avcodec-hw=any"
+        if hw_decode:
+            vlc_args = vlc_args + "--avcodec-hw=any"
 
-	vEQPlayback = VLCPlayback(video,vEQdb,vlc_args,meter)
+	    vEQPlayback = VLCPlayback(video,vEQdb,vlc_args,meter)
     
         logging.debug("Starting Playback with VLC")
     
@@ -210,7 +210,6 @@ def main(argv=None):
 #         GenericPlaybackObject.startPlayback(benchmarkduration)
         from videoInput.genericPlayback import GenericPlayback
         generic_command = "/usr/bin/omxplayer"
-	     
         generic_command = '/usr/bin/vlc-wrapper --avcodec-hw=any'
         generic_command = 'start chrome'
         workload =  "../gopro.mp4" #          pass this from cmd line or something       

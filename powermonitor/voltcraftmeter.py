@@ -117,9 +117,9 @@ class VoltcraftMeter():
                     continue   
                 else:
                     length = res[0] & 7; # the first byte contains the length in the lower 3 bits ( 111 = 7 )   
-                    if length > 0:    
-                        logging.debug("Received a packet of size: " + str(length) + " from device" )
-                        logging.debug("VC Meter Reading: " + str(res))
+#                     if length > 0:    
+#                         logging.debug("Received a packet of size: " + str(length) + " from device" )
+#                         logging.debug("VC Meter Reading: " + str(res))
                     prevchar = None 
                     currentchar = None 
                         
@@ -137,7 +137,7 @@ class VoltcraftMeter():
 #                                 On the MAC 0x0d 0x0a seems to be never sent so it never works
                                 return self.processPowerOutputString(outputstring)
                             outputstring +=str(currentchar) 
-                            logging.debug("VC outputstring: " + outputstring)
+#                             logging.debug("VC outputstring: " + outputstring)
             logging.warning("Count for VC meter exceeded: returning -1 for measurement")
             return -1
         

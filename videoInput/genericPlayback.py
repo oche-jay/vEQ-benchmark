@@ -28,8 +28,7 @@ class GenericPlayback(object):
         '''
         self.cmd = cmd
         self.workload = workload
-        self.args = shlex.split(cmd + " " + workload, whitespace_split=False)
-        print self.args
+        self.args = [cmd , workload]
         self.db = db
         self.meter = meter
         self.duration = None
@@ -38,19 +37,19 @@ class GenericPlayback(object):
         self.proc = None
         
         ENV_DICT = os.environ
+        logging.basicConfig( 
+                            format = '[genericPlayback] %(levelname)-7.7s %(message)s'
+                            )
+
         logging.debug("Path: " + ENV_DICT["PATH"])  
 #         "add expected location for known locations of"
         
     def startPlayback(self,duration=None):
         ENV_DICT = os.environ
-        print ENV_DICT
         self.playstart_time = time.time() 
         logging.debug(self.args)
-        print sys.platform
-        if sys.platform.startswith("win"):
-            self.proc = px = psutil.Popen(self.args, stdout=PIPE, shell=True)
-        else:
-            self.proc = px = psutil.Popen(self.args, stdout=PIPE)
+#         TODO: Extract this info
+        self.proc = px = psutil.Popen(self.args, stdout=PIPE)
         logging.debug(px.cpu_percent(interval=0.1))
         count = 0
 	
@@ -65,9 +64,10 @@ class GenericPlayback(object):
             rss =  mem_val.rss
              
             for proc in px.children(recursive=True):
-                cpu_val += proc.cpu_percent()
-                mempercent_val += proc.memory_percent()
-                rss +=  mem_val.rss
+               
+                    cpu_val += proc.cpu_percent()
+                    mempercent_val += proc.memory_percent()
+                    rss +=  mem_val.rss
 
             if sys.platform.startswith("darwin"):
 #            Theres no way to capture this  on bsd unix apparently #
@@ -79,7 +79,7 @@ class GenericPlayback(object):
   
             if self.meter is not None:
                 power_val = self.meter.getReading()
-                logging.debug("Got power measurement: " +  str(power_val))
+                logging.debug("Power: " +  str(power_val))
                 power_v = float(power_val)
             else:
                 power_val = -1
@@ -88,8 +88,9 @@ class GenericPlayback(object):
             sent_now = psutil.net_io_counters().bytes_sent
             recv_now = psutil.net_io_counters().bytes_recv
                 
-            marq_str = str.format("CPU: %3.1f%%%%\nMEM: %3.1f%%%%\nPOWR: %3.1fW\n" % (cpu_val,mempercent_val,power_val)) #need to escape %% twice
-
+            marq_str = str.format("CPU: %3.1f%% MEM: %3.1f%% POWR: %3.1fW" % (cpu_val,mempercent_val,power_val)) #need to escape %% twice
+            logging.info(marq_str)
+            
             values = [timestamp, cpu_val, mempercent_val, rss, sent_now, recv_now, io_read, io_write, sys_index_FK, video_index_FK]
             powers = [timestamp,power_v,sys_index_FK, video_index_FK] 
             self.db.insertIntoReadingsTable(values)
@@ -98,6 +99,7 @@ class GenericPlayback(object):
             count+=1
             now = time.time()
             elapsed = now - self.playstart_time 
+        
             if duration and  elapsed  >= duration:
                 break 
              
@@ -124,18 +126,36 @@ if __name__ == '__main__':
         on Windows or something, 
         In any case, this causes problems if not set
         '''
+        logging.basicConfig( 
+                            format = '[genericPlayback] %(levelname)-7.7s %(message)s'
+                            )
+
+        logging.getLogger().setLevel(logging.DEBUG)
+        logging.debug("Starting generic playback test")
+         
+        db = DB.vEQ_database("memory")
+        from powermonitor.voltcraftmeter import VoltcraftMeter
+        implementedPowerMeters = {
+                              "voltcraft": VoltcraftMeter()
+                            }
     
+        meter = implementedPowerMeters.get('voltcraft',None)
+        meter.initDevice()
+        
         workload = "/home/system/480p_transformerts.mp4"
         workload = "http://videoserv.cs.st-andrews.ac.uk/dash.js/samples/dash-if-reference-player/index.html"
         youtube_quality = ""
        
-        db = DB.vEQ_database("memory")
-        cmd= "/Applications/VLC.app/Contents/MacOS/VLC -vv "  + workload
+       
+        cmd= "/Applications/VLC.app/Contents/MacOS/VLC -vv "
+        
+        
         cmd = r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+        os.system('taskkill /f /im chrome.exe')
 
-        gpb = GenericPlayback(cmd=cmd,workload=workload,db=db)
+        gpb = GenericPlayback(cmd=cmd,workload=workload,db=db,meter=meter)
         try:
-            gpb.startPlayback(20) 
+            gpb.startPlayback(240) 
             print "here"
         except:
             traceback.print_exc()

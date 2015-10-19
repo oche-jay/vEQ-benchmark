@@ -10,11 +10,6 @@ import os
 import traceback
 from os.path import expanduser
 
-logging.basicConfig( 
-format = '[vEQ_database] %(levelname)-7.7s %(message)s'
-)
-
-
 
 class vEQ_database(object):
     '''
@@ -489,6 +484,9 @@ class vEQ_database(object):
         
     
 if __name__ == '__main__':
+    logging.basicConfig( 
+                        format = '[vEQ_database] %(levelname)-7.7s %(message)s'
+                        )
     dbpath = os.path.abspath('C:/Users/ooe/Documents/git/vEQ_db.sqlite')
     dbpath = os.path.abspath('/Users/oche/Dropbox/vEQ_db.sqlite')
 
