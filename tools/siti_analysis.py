@@ -37,6 +37,10 @@ from scipy import ndimage
 from vEQ_ssim.vEQ_ssim import convertToYUV 
 from __main__ import traceback
 
+logging.basicConfig( 
+    format = '[vEQ_SITI analyis] %(levelname)-7.7s %(message)s'
+    )
+
 FFMPEG_LOC = "/usr/local/bin/ffmpeg"
 
 SI_array= []
@@ -96,8 +100,6 @@ def getSITI(ref_file, makeVideo=True):
     maxTI = 0
     pmag = 0
    
-   
-    
     if ".yuv" in ref_file:
         # Inputs are uncompressed video in YUV420 planar format
         # Get resolution from file name
@@ -112,6 +114,13 @@ def getSITI(ref_file, makeVideo=True):
         print "Getting ST and TI of %s, resolution %d x %d" % (ref_file, width, height)
     else:
         ref_file = convertToYUV(ref_file)
+        m = re.search(r"(\d+)x(\d+)", ref_file)
+        
+        if not m:
+            print "Could not find resolution in file name: %s" % (ref_file)
+            exit(1)
+    
+        width, height = int(m.group(1)), int(m.group(2))
     
     ref_fh = open(ref_file, "rb")    
     first_frame = True
@@ -119,7 +128,7 @@ def getSITI(ref_file, makeVideo=True):
     while True:
         try:
             logging.debug("REading YUV frame")
-            ref, uref, vref = img_read_yuv(ref_fh, width, height)
+            ref, _, _ = img_read_yuv(ref_fh, width, height)
         except:
             traceback.print_exc()
             break
@@ -128,7 +137,7 @@ def getSITI(ref_file, makeVideo=True):
         dy = ndimage.sobel(ref, 1)  # vertical derivative    
         mag= numpy.hypot(dx, dy) 
         mag= numpy.array(mag, dtype=numpy.uint64)
-        mx = numpy.max(mag)
+#         mx = numpy.max(mag)
   
         if makeVideo:
 #             logging.debug("Saving image to %s " %  os.getcwd())
@@ -165,20 +174,19 @@ def getSITI(ref_file, makeVideo=True):
     return maxSI, maxTI
 
 def main():
-    logging.basicConfig( 
-    format = '[vEQ_SITI analyis] %(levelname)-7.7s %(message)s'
-    )
+    
     logging.getLogger().setLevel(logging.ERROR)
     ref_file = sys.argv[1]
     getSITI(ref_file, makeVideo=False) 
 
     import matplotlib.pyplot as plt
     
-#     plt.plot(SI_array, label="SI")
-#     plt.plot(TI_array, label="TI")
-#     plt.show()
-#           
-#     createMotionandSobelVideos()
+    plt.plot(SI_array, label="SI", color="red")
+    plt.plot(TI_array, label="TI", color="blue")
+    plt.legend()
+    plt.show()
+           
+    createMotionandSobelVideos()
 
 PROFILE = True   
 if PROFILE:

@@ -130,7 +130,7 @@ def convertToYUV(video, **kwargs):
         fileName = re.sub(r"\s+", '-', fileName)
 #         remove sub all non-word characters and replACE WITH underscore
         fileName = re.sub(r"[\W]+", '_', fileName).lower()
-        fileName = "_".join([codec,str(width),str(height),fileName])
+        fileName = "_".join([codec,(str(width) + "x" + str(height)),fileName])
         outfile = os.path.join(filePath, fileName + '.yuv') 
         
         if os.path.exists((outfile)):

@@ -33,6 +33,7 @@ class GenericPlayback(object):
         self.meter = meter
         self.duration = None
         self.playstart_time = 0
+        self.count = 0
         self.polling_interval = 1
         self.proc = None
         
@@ -43,16 +44,12 @@ class GenericPlayback(object):
 
         logging.debug("Path: " + ENV_DICT["PATH"])  
 #         "add expected location for known locations of"
-        
-    def startPlayback(self,duration=None):
-        ENV_DICT = os.environ
-        self.playstart_time = time.time() 
-        logging.debug(self.args)
-#         TODO: Extract this info
-        self.proc = px = psutil.Popen(self.args, stdout=PIPE)
-        logging.debug(px.cpu_percent(interval=0.1))
-        count = 0
-	
+    
+    
+    def monitorProcess(self,px=None,duration=None):
+        '''
+        Loop to monitor a process
+        '''
         while True:
             timestamp = loop_starttime = time.time()
             sys_index_FK = self.db.sysinfo_index
@@ -64,19 +61,18 @@ class GenericPlayback(object):
             rss =  mem_val.rss
              
             for proc in px.children(recursive=True):
-               
-                    cpu_val += proc.cpu_percent()
-                    mempercent_val += proc.memory_percent()
-                    rss +=  mem_val.rss
-
+                cpu_val += proc.cpu_percent()
+                mempercent_val += proc.memory_percent()
+                rss +=  mem_val.rss
+            
             if sys.platform.startswith("darwin"):
-#            Theres no way to capture this  on bsd unix apparently #
+            #            Theres no way to capture this  on bsd unix apparently #
                 io_read = -1
                 io_write = -1
             else:
                 io_read = px.io_counters().read_bytes
                 io_write = px.io_counters().write_bytes
-  
+            
             if self.meter is not None:
                 power_val = self.meter.getReading()
                 logging.debug("Power: " +  str(power_val))
@@ -96,19 +92,25 @@ class GenericPlayback(object):
             self.db.insertIntoReadingsTable(values)
             self.db.insertIntoPowerTable(powers)
              
-            count+=1
+            self.count+=1
             now = time.time()
             elapsed = now - self.playstart_time 
-        
+            
             if duration and  elapsed  >= duration:
-                break 
+                break
              
-    	    # wait for the time in milliseconds left to complete one second or not at all 
-    	    time.sleep(max(0,1-(now-loop_starttime)))
+            # wait for the time in milliseconds left to complete one second or not at all 
+            time.sleep(max(0,1-(now-loop_starttime)))
 
+        
+    def startPlayback(self,duration=None):
+        self.playstart_time = time.time() 
+        self.proc = px = psutil.Popen(self.args, stdout=PIPE)
+        logging.debug(px.cpu_percent(interval=0.1))
+        self.count = 0
+        self.monitorProcess(px=self.proc,duration=duration)
         self.stopPlayback()
         return 1
-    
     
     def stopPlayback(self):
         px = self.proc
@@ -151,11 +153,12 @@ if __name__ == '__main__':
         
         
         cmd = r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
+        cmd = r"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
         os.system('taskkill /f /im chrome.exe')
 
-        gpb = GenericPlayback(cmd=cmd,workload=workload,db=db,meter=meter)
+        gpb = GenericPlayback(cmd=cmd,workload=workload,db=db,meter=None)
         try:
-            gpb.startPlayback(240) 
+            gpb.startPlayback(duration=240) 
             print "here"
         except:
             traceback.print_exc()
