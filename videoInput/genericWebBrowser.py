@@ -18,20 +18,20 @@ class GenericWebBrowserPlayback(GenericPlayback):
         self.workload = "http://dash.edgesuite.net/akamai/streamroot/050714/Spring_4Ktest.mpd"
         self.p = PATHSTOCHROMEDRIVER =   {
                                     "darwin": "/usr/local/bin/chromedriver", 
-                                    "win32": "", 
+                                    "win32": "../lib/chromedriver.exe", 
                                     "linux": "" 
                                     }
-        self.webdriver = None
-                                    
+        self.webdriver = None                                    
         self.pathtochromedriver = PATHSTOCHROMEDRIVER.get(sys.platform,"")
+        print self.pathtochromedriver
     
     def startBrowser(self,duration):
         self.playstart_time = time.time()
         px = psutil.Process()
-        pathtochromedriver = self.p.get(sys.platform,"")
-        self.webdriver = drv = webdriver.Chrome(pathtochromedriver)
+       
+        self.webdriver = drv = webdriver.Chrome(self.pathtochromedriver)
         drv.get(self.url)
-        time.sleep(5)
+        time.sleep(2)
 #         Not so generic methods to playback video on dash 
         inputBar =  drv.find_element_by_tag_name("input")
         inputBar.send_keys(self.workload)
@@ -49,7 +49,7 @@ class GenericWebBrowserPlayback(GenericPlayback):
         
         
     def main(self):
-        duration = 300
+        duration = 100
         self.startBrowser(duration)
 
 logging.getLogger().setLevel(logging.DEBUG)

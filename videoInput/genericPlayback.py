@@ -14,6 +14,7 @@ from subprocess import PIPE
 import psutil
 import logging
 import database.vEQ_database as DB
+from psutil import NoSuchProcess
 
 class GenericPlayback(object):
     '''   
@@ -61,10 +62,15 @@ class GenericPlayback(object):
             rss =  mem_val.rss
              
             for proc in px.children(recursive=True):
-                cpu_val += proc.cpu_percent()
-                mempercent_val += proc.memory_percent()
-                rss +=  mem_val.rss
-            
+                try:
+                    cpu_val += proc.cpu_percent(interval=0.1)
+                    mempercent_val += proc.memory_percent()
+                    rss +=  mem_val.rss
+                except NoSuchProcess:
+                    logging.warning("%s is no longer in existence" % proc )
+                    continue
+                
+            print cpu_val/8
             if sys.platform.startswith("darwin"):
             #            Theres no way to capture this  on bsd unix apparently #
                 io_read = -1
@@ -101,6 +107,7 @@ class GenericPlayback(object):
              
             # wait for the time in milliseconds left to complete one second or not at all 
             time.sleep(max(0,1-(now-loop_starttime)))
+        return
 
         
     def startPlayback(self,duration=None):
