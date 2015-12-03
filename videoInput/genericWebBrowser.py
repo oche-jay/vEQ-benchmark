@@ -54,7 +54,14 @@ class GenericWebBrowserPlayback(GenericPlayback):
 
 logging.getLogger().setLevel(logging.DEBUG)
 db = DB.vEQ_database("memory")
-obj = GenericWebBrowserPlayback(db=db)
+from powermonitor.voltcraftmeter import VoltcraftMeter
+implementedPowerMeters = {
+                              "voltcraft": VoltcraftMeter()
+                            }
+    
+meter = implementedPowerMeters.get('voltcraft',None)
+meter.initDevice()
+obj = GenericWebBrowserPlayback(db=db,meter=meter)
 obj.main()
 
         

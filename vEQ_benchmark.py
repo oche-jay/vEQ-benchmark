@@ -4,6 +4,8 @@ Created on 24 Feb 2015
 @author: oche
 '''
 from __future__ import unicode_literals
+from __future__ import division
+
 import argparse
 import os
 import sys
@@ -45,7 +47,7 @@ def makeDefaultDBFolder():
         os.makedirs(video_download_folder)
     return video_download_folder
 
-vlc_verbosity = 2
+vlc_verbosity = -1
 default_youtube_quality= 'bestvideo'
 benchmark_duration = 20#or -1 for length of video
 meter = None
@@ -53,14 +55,14 @@ meter = None
 default_folder= makeDefaultDBFolder()
 default_database = os.path.join( default_folder, "vEQ_db.sqlite")
 
-logging.getLogger().setLevel(logging.ERROR)
+logging.getLogger().setLevel(logging.DEBUG)
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="vEQ-benchmark: A Benchmarking and Measurement Tool for Video")
     parser.add_argument("video" , metavar="VIDEO", help="A local file or URL(Youtube, Vimeo etc.) for the video to be benchmarked")
     parser.add_argument("-y", "--youtube-format", metavar="format", dest="youtube_quality", default=default_youtube_quality, help="For Youtube videos, a value that corressponds to the quality level see youtube-dl for details")
     parser.add_argument("-m", "--power-meter", metavar="meter", dest="meter", default='voltcraft',   help="The meter to use for power measurement TODO: Expand this")
-    parser.add_argument("-d", "--duration", metavar="Duration", dest="benchmark_duration", default=120, type=int, help="The length of time in seconds for the benchmark to run.")
+    parser.add_argument("-d", "--duration", metavar="Duration", dest="benchmark_duration", default=60, type=int, help="The length of time in seconds for the benchmark to run.")
     parser.add_argument("-D", "--Database-location", dest="db_loc", metavar ="location for database file or \'memory\'", help = "A absolute location for storing the database file ")
     parser.add_argument("-P", "--plot", dest="to_plot", action='store_true', help="Flag to set if this session should be plotted")
     parser.add_argument("-S", "--show", dest="to_show", action='store_true', help="Flag to set if the plot of this should be displayed on the screen after a session is completed")
@@ -191,7 +193,6 @@ def main(argv=None):
     video_index = vEQdb.insertIntoVideoInfoTable(video_values)
     
 #==========================================VLC VIDEO SPECIFIC =============== 
-#     if False:
     if system_player == "libvlc":
         from videoInput.veqplayback import VLCPlayback
         vlc_args = "--video-title-show --video-title-timeout 10 --sub-source marq --sub-filter marq " + "--verbose " + str(vlc_verbosity)
@@ -199,7 +200,7 @@ def main(argv=None):
         if hw_decode:
             vlc_args = vlc_args + "--avcodec-hw=any"
 
-	    vEQPlayback = VLCPlayback(video,vEQdb,vlc_args,meter)
+        vEQPlayback = VLCPlayback(video,vEQdb,vlc_args,meter)
     
         logging.debug("Starting Playback with VLC")
     
@@ -222,18 +223,28 @@ def main(argv=None):
     powers = vEQdb.getValuesFromPowerTable(start_time, end_time)
     cpus = vEQdb.getCPUValuesFromPSTable(start_time, end_time)
     memorys = vEQdb.getMemValuesFromPSTable(start_time, end_time)
+    reads = vEQdb.getValuesFromPSTable("io_bytesread", start_time, end_time) 
+    writes = vEQdb.getValuesFromPSTable("io_byteswrite", start_time, end_time) 
     net_r = vEQdb.getValuesFromPSTable("net_recv", start_time, end_time) 
     
-    try:
-        data_transferred = net_r[-1] - net_r[0]
-    except IndexError:
-        logging.error("Something went wrong with collecting networking data")
-        data_transferred = 0
+    def getDataRateFromArray(arry):
+        data_volume = 0
+        try:
+            data_volume = arry[-1] - arry[0]
+        except IndexError:
+            logging.error("Something went wrong with collecting data from array: " + str(arry.__namespace))
+        return data_volume
+    
+    data_transferred = getDataRateFromArray(net_r) 
+    data_read_from_io = getDataRateFromArray(reads)
+    data_writes_from_io = getDataRateFromArray(writes)
 
     '''
     http://stackoverflow.com/questions/4029436/subtracting-the-current-and-previous-item-in-a-list 
     '''
     bitrate =  [y - x for x,y in zip(net_r,net_r[1:])]
+    io_readrate = [y - x for x,y in zip(reads,reads[1:])]
+    io_writerate = [y - x for x,y in zip(writes,writes[1:])]
 
     p = numpy.array(powers)
     c = numpy.array(cpus)
@@ -243,13 +254,19 @@ def main(argv=None):
     p = p[p>0]
     c = c[c>0]
     m = m[m>0]
+
     
     mean_power = getMean(p)
     mean_cpu =  getMean(c)
     mean_memory = getMean(m)
     
-    mean_gpu = -1 #TODO: IMplement GPU 
+    mean_gpu = -1 
+    
+    #TODO: IMplement GPU 
     mean_bandwidth = str(Decimal(data_transferred * 8) / Decimal(1000000* total_duration))
+    
+    mean_io_read = str(Decimal(data_read_from_io * 8) / Decimal(1048576 * total_duration))
+    mean_io_write = str(Decimal(data_writes_from_io * 8) / Decimal(1048576 * total_duration))
 
     video_values = [start_time,video,video_data,video_codec,video_width,video_height] 
     summary_keys = ("video_name" , "video_url", "video_codec", "video_height", "video_width", "mean_power", "mean_cpu", "mean_memory", "mean_gpu" , "mean_bandwidth" ,"data_transferred", "file_size", "sys_info_FK", "video_info_FK")
@@ -274,7 +291,7 @@ def main(argv=None):
     if online_video:
         print "Video URL: " + video
     print "Benchmark Duration: " + str(end_time - start_time) + "secs"
-    print "Video Codec: " + video_codec
+    print "Video Codec: " + str(video_codec)
     print "Width: " + str(video_width)  
     print "Height: " + str(video_height)
     print "Mean Power: " + str(mean_power) + "W"
@@ -284,7 +301,10 @@ def main(argv=None):
     print "Video Filesize " + "Not Implemented (TODO)"
     if online_video:
         print "Mean Bandwidth: "+ mean_bandwidth + "Mbps"
-        print "Video Data Transferred " + str(float( data_transferred / (1024**2))) + " MB"
+        print "Video Data Transferred: " + str(float( data_transferred / (1024**2))) + " MB"
+    print data_read_from_io
+    print "Video Data read from I/O: " + str(float( data_read_from_io / (1024**2))) + " MB"
+    print "Video Data written to I/O: " + str(float( data_writes_from_io / (1024**2))) + " MB"
     print "============================================="
     print "System Information"
     print "============================================="
@@ -315,7 +335,7 @@ def main(argv=None):
         makeSubPlot(start_time=start_time, figure_title=plot_title, cpus=c, memorys=m, bitrate=bitrate, powers=powers, gpus=gpus, to_show=to_show)
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':'['
     main()
 
 

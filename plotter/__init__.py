@@ -29,7 +29,7 @@ def plot(alist, title=None, filename=None, show=False):
 def makeSubPlot(start_time=None, figure_title=None, powers=None, cpus=None, memorys=None, gpus=None, bitrate=None, to_save=True, to_show=True, filename=None ):    
     start_time =  str(start_time)
     
-    NUMBER_OF_PLTS = 4
+    NUMBER_OF_PLTS = 5
     if gpus:
         NUMBER_OF_PLTS = 5
         
