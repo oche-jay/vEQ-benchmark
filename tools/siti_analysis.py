@@ -1,6 +1,6 @@
 """
 SI and TI Calculations
-Copyright (c) 2014 Alex Izvorski <aizvorski@gmail.com>
+Copyright (c) 2014 Oche Ejembi, Alex Izvorski <aizvorski@gmail.com>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
